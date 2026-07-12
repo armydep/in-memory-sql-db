@@ -12,7 +12,7 @@ from memdb.commands.insert import InsertQuery
 from memdb.commands.select import SelectQuery
 from memdb.commands.update import UpdateQuery
 from memdb.data.column import Column
-from memdb.data.types.datatype import BlobType, BoolType, Datatype, IntType, StrType
+from memdb.data.types.datatype import BoolType, Datatype, IntType, StrType
 
 
 _CREATE_TABLE_RE = re.compile(
@@ -42,7 +42,6 @@ _DATA_TYPES: dict[str, type[Datatype]] = {
     "BOOL": BoolType,
     "INT": IntType,
     "STR": StrType,
-    "BLOB": BlobType,
 }
 
 
@@ -76,10 +75,11 @@ class QueryParser:
             return SelectQuery(match.group("table"))
 
         if match := _INSERT_RE.fullmatch(query):
-            row_names = [
-                row.strip() for row in match.group("rows").split(",")
-                if row.strip()
-            ]
+            rows_str = match.group("rows").strip()
+            row_names = [row.strip() for row in rows_str.split(",")] if rows_str else []
+            if any(not name for name in row_names):
+                raise ValueError("INSERT column list contains an empty name")
+
             values = self._parse_values(match.group("values"))
             if len(row_names) != len(values):
                 raise ValueError(
@@ -127,6 +127,9 @@ class QueryParser:
         return columns
 
     def _parse_datatype(self, datatype_name: str) -> Datatype:
+        if datatype_name.upper() == "BLOB":
+            raise ValueError("unsupported column type Blob")
+
         datatype_class = _DATA_TYPES.get(datatype_name.upper())
         if datatype_class is None:
             raise ValueError(f"Unsupported datatype: {datatype_name}")

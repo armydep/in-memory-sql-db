@@ -108,6 +108,14 @@ class QueryParserParseTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate column names"):
             self.parser.parse('insert (id, id) into users (1, 2)')
 
+    def test_insert_rejects_empty_column_name(self):
+        with self.assertRaisesRegex(ValueError, "empty name"):
+            self.parser.parse('insert (id, , name) into users (1, 2, "alice")')
+
+    def test_create_table_rejects_blob_column_type(self):
+        with self.assertRaisesRegex(ValueError, "unsupported column type Blob"):
+            self.parser.parse("create table files { data BLOB }")
+
     def test_parse_raises_for_unsupported_query(self):
         with self.assertRaises(ValueError):
             self.parser.parse("frobnicate users")
