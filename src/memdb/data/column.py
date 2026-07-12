@@ -1,9 +1,11 @@
+from dataclasses import dataclass, field
+
 from memdb.data.cell_metadata import CellMetadata
 from memdb.data.types.datatype import Datatype
 
 
+@dataclass
 class Column:
-    def __init__(self, name: str, datatype: Datatype, metadata: CellMetadata | None = None):
-        self.name = name
-        self.datatype = datatype
-        self.metadata = metadata or CellMetadata()
+    name: str
+    datatype: Datatype
+    metadata: CellMetadata = field(default_factory=CellMetadata)

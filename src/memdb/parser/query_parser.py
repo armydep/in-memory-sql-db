@@ -1,5 +1,4 @@
 from memdb.commands.base import QueryInterface
-from memdb.parser.parsed_statement import ParsedCreateTable, ParsedSelect
 
 
 class QueryParser:
@@ -9,6 +8,8 @@ class QueryParser:
         2. switch case on first token:
          case SELECT:
            RETURN select_query
+         case CREATE:
+           RETURN create_table_query
          case UPDATE:
            RETURN update_query
          case INSERT:

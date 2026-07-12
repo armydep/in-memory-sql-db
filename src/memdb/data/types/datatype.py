@@ -10,6 +10,12 @@ class Datatype(ABC):
     def python_type(self) -> type:
         raise NotImplementedError
 
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Datatype) and type(self) is type(other)
+
+    def __hash__(self) -> int:
+        return hash(type(self))
+
 
 class BoolType(Datatype):
     def name(self) -> str:

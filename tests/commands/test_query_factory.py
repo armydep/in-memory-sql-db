@@ -2,50 +2,63 @@ import unittest
 from unittest.mock import Mock
 
 from memdb.commands.create_table import CreateTableQuery
+from memdb.commands.delete import DeleteQuery
+from memdb.commands.describe import DescribeQuery
+from memdb.commands.drop_table import DropTableQuery
+from memdb.commands.insert import InsertQuery
 from memdb.commands.query_factory import QueryFactory
 from memdb.commands.select import SelectQuery
-from memdb.data.column import Column
-from memdb.data.types.datatype import IntType
-from memdb.parser.parsed_statement import ParsedCreateTable, ParsedSelect
+from memdb.commands.update import UpdateQuery
 from memdb.parser.query_parser import QueryParser
 
 
 class QueryFactoryCreateTest(unittest.TestCase):
-    def _factory_with_parsed(self, parsed):
+    def _assert_delegates_to_parser(self, command, query):
         parser = Mock(spec=QueryParser)
-        parser.parse.return_value = parsed
-        return QueryFactory(parser=parser), parser
+        parser.parse.return_value = query
+        factory = QueryFactory(parser=parser)
 
-    def test_create_table_statement_returns_create_table_query(self):
-        command = "CREATE TABLE users (id INT)"
-        columns = [Column("id", IntType())]
-        parsed = ParsedCreateTable(table_name="users", columns=columns)
-        factory, parser = self._factory_with_parsed(parsed)
-
-        query = factory.create(command)
+        result = factory.create(command)
 
         parser.parse.assert_called_once_with(command)
-        self.assertIsInstance(query, CreateTableQuery)
-        self.assertEqual(query.table_name, "users")
-        self.assertEqual(query.columns, columns)
+        self.assertIs(result, query)
 
-    def test_select_statement_returns_select_query(self):
-        command = "SELECT * FROM users"
-        parsed = ParsedSelect(table_name="users")
-        factory, parser = self._factory_with_parsed(parsed)
+    def test_describe_db_delegates_to_parser(self):
+        self._assert_delegates_to_parser("describe db", DescribeQuery())
 
-        query = factory.create(command)
+    def test_create_table_delegates_to_parser(self):
+        self._assert_delegates_to_parser(
+            "create table users { id INT }",
+            CreateTableQuery("users", []),
+        )
 
-        parser.parse.assert_called_once_with(command)
-        self.assertIsInstance(query, SelectQuery)
-        self.assertEqual(query.table_name, "users")
+    def test_drop_table_delegates_to_parser(self):
+        self._assert_delegates_to_parser(
+            "drop table users", DropTableQuery("users")
+        )
 
-    def test_unsupported_parsed_statement_raises_value_error(self):
-        parsed = object()
-        factory, _ = self._factory_with_parsed(parsed)
+    def test_select_delegates_to_parser(self):
+        self._assert_delegates_to_parser(
+            "select * from users", SelectQuery("users")
+        )
 
-        with self.assertRaises(ValueError):
-            factory.create("DROP TABLE users")
+    def test_insert_delegates_to_parser(self):
+        self._assert_delegates_to_parser(
+            'insert (1, "alice") into users',
+            InsertQuery("users", [1, "alice"]),
+        )
+
+    def test_delete_delegates_to_parser(self):
+        self._assert_delegates_to_parser(
+            "delete from users where {id = 5}",
+            DeleteQuery("users", "id", 5),
+        )
+
+    def test_update_delegates_to_parser(self):
+        self._assert_delegates_to_parser(
+            'update (1, "alice2") in users where {id = 5}',
+            UpdateQuery("users", [1, "alice2"], "id", 5),
+        )
 
 
 if __name__ == "__main__":
