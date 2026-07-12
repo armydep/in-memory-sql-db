@@ -10,6 +10,10 @@ _COMMANDS = [
     "describe db",
     "describe table students",
     "describe table bitcoins",
+    "create table departments {id int, dep_name str}",
+    "describe db",
+    "drop table students",
+    "describe db",
 ]
 
 

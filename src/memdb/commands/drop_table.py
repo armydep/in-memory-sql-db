@@ -8,4 +8,8 @@ class DropTableQuery(QueryInterface):
         self.table_name = table_name
 
     def run(self, data: DBData) -> QueryResult:
-        raise NotImplementedError
+        if self.table_name not in data.tables:
+            return QueryResult(False, f"table {self.table_name} does not exist")
+
+        del data.tables[self.table_name]
+        return QueryResult(True, f"table {self.table_name} dropped")
