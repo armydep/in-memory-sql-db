@@ -5,4 +5,5 @@ from memdb.commands.query_result import QueryResult
 
 class DescribeQuery(QueryInterface):
     def run(self, data: DBData) -> QueryResult:
-        raise NotImplementedError
+        rows = [[table_name] for table_name in data.tables]
+        return QueryResult(True, "Describing db", ["Tables"], rows)
