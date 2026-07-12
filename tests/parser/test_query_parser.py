@@ -2,7 +2,8 @@ import unittest
 
 from memdb.commands.create_table import CreateTableQuery
 from memdb.commands.delete import DeleteQuery
-from memdb.commands.describe import DescribeQuery
+from memdb.commands.describe_db import DescribeDBQuery
+from memdb.commands.describe_table import DescribeTableQuery
 from memdb.commands.drop_table import DropTableQuery
 from memdb.commands.insert import InsertQuery
 from memdb.commands.select import SelectQuery
@@ -19,7 +20,13 @@ class QueryParserParseTest(unittest.TestCase):
     def test_describe_returns_describe_query(self):
         query = self.parser.parse("describe db")
 
-        self.assertIsInstance(query, DescribeQuery)
+        self.assertIsInstance(query, DescribeDBQuery)
+
+    def test_describe_table_returns_describe_query_with_table_name(self):
+        query = self.parser.parse("describe table users")
+
+        self.assertIsInstance(query, DescribeTableQuery)
+        self.assertEqual(query.table_name, "users")
 
     def test_create_table_returns_create_table_query(self):
         query = self.parser.parse("create table users { id INT, name STR }")

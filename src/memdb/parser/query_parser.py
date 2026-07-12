@@ -5,7 +5,8 @@ from typing import Any
 from memdb.commands.base import QueryInterface
 from memdb.commands.create_table import CreateTableQuery
 from memdb.commands.delete import DeleteQuery
-from memdb.commands.describe import DescribeQuery
+from memdb.commands.describe_db import DescribeDBQuery
+from memdb.commands.describe_table import DescribeTableQuery
 from memdb.commands.drop_table import DropTableQuery
 from memdb.commands.insert import InsertQuery
 from memdb.commands.select import SelectQuery
@@ -16,6 +17,10 @@ from memdb.data.types.datatype import BlobType, BoolType, Datatype, IntType, Str
 
 _CREATE_TABLE_RE = re.compile(
     r"^create\s+table\s+(?P<table>\w+)\s*\{\s*(?P<columns>.*?)\s*\}$",
+    re.IGNORECASE,
+)
+_DESCRIBE_TABLE_RE = re.compile(
+    r"^describe\s+table\s+(?P<table>\w+)$",
     re.IGNORECASE,
 )
 _DROP_TABLE_RE = re.compile(r"^drop\s+table\s+(?P<table>\w+)$", re.IGNORECASE)
@@ -46,7 +51,10 @@ class QueryParser:
         query = query_str.strip()
 
         if query.lower() == "describe db":
-            return DescribeQuery()
+            return DescribeDBQuery()
+
+        if match := _DESCRIBE_TABLE_RE.fullmatch(query):
+            return DescribeTableQuery(match.group("table"))
 
         if match := _CREATE_TABLE_RE.fullmatch(query):
             return CreateTableQuery(

@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 from memdb.commands.create_table import CreateTableQuery
 from memdb.commands.delete import DeleteQuery
-from memdb.commands.describe import DescribeQuery
+from memdb.commands.describe_db import DescribeDBQuery
 from memdb.commands.drop_table import DropTableQuery
 from memdb.commands.insert import InsertQuery
 from memdb.commands.query_factory import QueryFactory
@@ -24,7 +24,7 @@ class QueryFactoryCreateTest(unittest.TestCase):
         self.assertIs(result, query)
 
     def test_describe_db_delegates_to_parser(self):
-        self._assert_delegates_to_parser("describe db", DescribeQuery())
+        self._assert_delegates_to_parser("describe db", DescribeDBQuery())
 
     def test_create_table_delegates_to_parser(self):
         self._assert_delegates_to_parser(
