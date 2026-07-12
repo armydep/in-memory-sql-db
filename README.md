@@ -11,10 +11,13 @@ parsing and execution logic are implemented incrementally in later steps.
 ## Layout
 
 - `src/memdb/` — the `memdb` package: `DBMS` facade, `commands/` (Command
-  pattern, one class per SQL statement), `parser/` (hand-written SQL
-  parser), `data/` (in-memory storage: `DBData`, `Table`, `Row`, `Column`,
-  `Cell`), `types/` (column datatypes).
-- `tests/` — mirrors `src/memdb/`, using `unittest`.
+  pattern, one class per SQL statement, plus `QueryFactory`/`QueryResult`),
+  `parser/` (hand-written SQL parser), `data/` (in-memory storage: `DBData`,
+  `Table`, `Row`, `Column`, `Cell`, and `types/` for column datatypes),
+  `storage/` (`DBStorage` persistence interface).
+- `tests/` — mirrors `src/memdb/`'s subpackages (`commands/`, `data/`, ...)
+  without repeating the `memdb` segment, to avoid a module-name collision
+  with the installed package during `unittest discover`. Uses `unittest`.
 
 ## Development
 
