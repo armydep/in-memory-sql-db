@@ -7,4 +7,4 @@ class QueryFactory:
         self.parser = parser or QueryParser()
 
     def create(self, command: str) -> QueryInterface:
-        raise NotImplementedError
+        return self.parser.parse(command)
