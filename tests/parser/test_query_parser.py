@@ -31,6 +31,16 @@ class QueryParserParseTest(unittest.TestCase):
             [Column("id", IntType()), Column("name", StrType())],
         )
 
+    def test_parse_is_case_insensitive(self):
+        query = self.parser.parse("CREATE TABLE users { id int, name str }")
+
+        self.assertIsInstance(query, CreateTableQuery)
+        self.assertEqual(query.table_name, "users")
+        self.assertEqual(
+            query.columns,
+            [Column("id", IntType()), Column("name", StrType())],
+        )
+
     def test_drop_returns_drop_table_query(self):
         query = self.parser.parse("drop table users")
 
