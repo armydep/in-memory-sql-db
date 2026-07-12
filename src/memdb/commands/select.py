@@ -7,5 +7,5 @@ class SelectQuery(QueryInterface):
     def __init__(self, table_name: str):
         self.table_name = table_name
 
-    def run_query(self, db_data: DBData) -> QueryResult:
+    def run(self, data: DBData) -> QueryResult:
         raise NotImplementedError

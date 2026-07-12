@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from memdb.data.db_data import DBData
 
 
-class StorageEngine(ABC):
+class DBStorage(ABC):
     @abstractmethod
     def load(self) -> DBData:
         raise NotImplementedError

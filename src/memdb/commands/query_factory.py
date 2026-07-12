@@ -6,5 +6,5 @@ class QueryFactory:
     def __init__(self, parser: QueryParser | None = None):
         self.parser = parser or QueryParser()
 
-    def create_query(self, query_str: str) -> QueryInterface:
+    def create(self, command: str) -> QueryInterface:
         raise NotImplementedError

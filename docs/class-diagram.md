@@ -2,24 +2,27 @@
 
 Core classes and relationships, derived from the original design diagram and
 updated to match implemented names (`CellMetadata` attached to `Column`;
-`StorageEngine` placeholder added for future persistence).
+`DBStorage` placeholder added for future persistence; `DBMS` requires
+injected storage + factory and an explicit `init()`).
 
 ```mermaid
 classDiagram
     direction LR
 
     class DBMS {
-        +run_query(query_str) QueryResult
+        +data: DBData?
+        +init()
+        +execute(command) QueryResult
     }
     class QueryFactory {
-        +create_query(query_str) QueryInterface
+        +create(command) QueryInterface
     }
     class QueryParser {
-        +parse(query_str)
+        +parse(command)
     }
     class QueryInterface {
         <<abstract>>
-        +run_query(db_data) QueryResult
+        +run(data) QueryResult
     }
     class CreateTableQuery
     class SelectQuery
@@ -73,14 +76,16 @@ classDiagram
     class StrType
     class BlobType
 
-    class StorageEngine {
+    class DBStorage {
         <<abstract>>
         +load() DBData
         +save(db_data)
     }
+    class InMemoryStorage
 
     DBMS --> QueryFactory
-    DBMS --> DBData
+    DBMS --> DBStorage
+    DBMS ..> DBData : holds after init()
     DBMS ..> QueryInterface : executes
     DBMS ..> QueryResult : returns
     QueryFactory --> QueryParser
@@ -107,5 +112,6 @@ classDiagram
     Datatype <|-- StrType
     Datatype <|-- BlobType
 
-    StorageEngine ..> DBData : loads / saves (future)
+    DBStorage <|-- InMemoryStorage
+    DBStorage ..> DBData : loads / saves (future persistence)
 ```

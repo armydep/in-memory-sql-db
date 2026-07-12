@@ -12,12 +12,13 @@ sequenceDiagram
     participant Query as QueryInterface impl
     participant DBData
 
-    Client->>DBMS: run_query(query_str)
-    DBMS->>QueryFactory: create_query(query_str)
-    QueryFactory->>QueryParser: parse(query_str)
+    Note over DBMS: init() already called; data is set
+    Client->>DBMS: execute(command)
+    DBMS->>QueryFactory: create(command)
+    QueryFactory->>QueryParser: parse(command)
     QueryParser-->>QueryFactory: parsed statement
     QueryFactory-->>DBMS: QueryInterface instance
-    DBMS->>Query: run_query(db_data)
+    DBMS->>Query: run(data)
     Query->>DBData: read / mutate tables
     DBData-->>Query: data
     Query-->>DBMS: QueryResult

@@ -1,8 +1,11 @@
 from memdb import DBMS
+from memdb.commands.query_factory import QueryFactory
+from memdb.storage.in_memory_storage import InMemoryStorage
 
 
 def main() -> None:
-    dbms = DBMS()
+    dbms = DBMS(storage=InMemoryStorage(), query_factory=QueryFactory())
+    dbms.init()
     print(f"memdb initialized: {dbms}")
 
 

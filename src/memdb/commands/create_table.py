@@ -9,5 +9,5 @@ class CreateTableQuery(QueryInterface):
         self.table_name = table_name
         self.columns = columns
 
-    def run_query(self, db_data: DBData) -> QueryResult:
+    def run(self, data: DBData) -> QueryResult:
         raise NotImplementedError
