@@ -84,6 +84,22 @@ class QueryParserParseTest(unittest.TestCase):
         self.assertEqual(query.column_name, "id")
         self.assertEqual(query.value, 5)
 
+    def test_insert_quoted_true_and_false_are_kept_as_strings(self):
+        query = self.parser.parse('insert ("true", "false") into flags')
+
+        self.assertIsInstance(query, InsertQuery)
+        self.assertEqual(query.values, ["true", "false"])
+
+    def test_insert_unquoted_true_and_false_are_booleans(self):
+        query = self.parser.parse("insert (true, false) into flags")
+
+        self.assertIsInstance(query, InsertQuery)
+        self.assertEqual(query.values, [True, False])
+
+    def test_parse_raises_for_unsupported_query(self):
+        with self.assertRaises(ValueError):
+            self.parser.parse("frobnicate users")
+
 
 if __name__ == "__main__":
     unittest.main()

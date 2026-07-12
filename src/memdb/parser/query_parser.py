@@ -48,6 +48,13 @@ _DATA_TYPES: dict[str, type[Datatype]] = {
 
 class QueryParser:
     def parse(self, query_str: str) -> QueryInterface:
+        """
+        Matches the trimmed query string against a fixed-format regex per
+        statement keyword (DESCRIBE DB / DESCRIBE TABLE / CREATE TABLE /
+        DROP TABLE / SELECT / INSERT / DELETE / UPDATE) and constructs the
+        matching QueryInterface implementation from the captured groups.
+        Raises ValueError if no statement's grammar matches.
+        """
         query = query_str.strip()
 
         if query.lower() == "describe db":
@@ -118,13 +125,19 @@ class QueryParser:
         if not values_str.strip():
             return []
 
-        lexer = shlex.shlex(values_str, posix=True)
+        # posix=False keeps the surrounding quote characters in each token
+        # (rather than stripping them), so _parse_value can tell a quoted
+        # string like "true" apart from the bareword true.
+        lexer = shlex.shlex(values_str, posix=False)
         lexer.whitespace = ","
         lexer.whitespace_split = True
         return [self._parse_value(value) for value in lexer]
 
     def _parse_value(self, value_str: str) -> Any:
         value = value_str.strip()
+        if len(value) >= 2 and value[0] == '"' and value[-1] == '"':
+            return value[1:-1]
+
         if value.upper() == "TRUE":
             return True
         if value.upper() == "FALSE":

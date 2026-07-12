@@ -10,12 +10,12 @@ class DescribeTableQuery(QueryInterface):
     def run(self, data: DBData) -> QueryResult:
         table = data.tables.get(self.table_name)
         if table is None:
-            return QueryResult(False, f"table {self.table_name} does not exist")
+            return QueryResult(success=False, message=f"table {self.table_name} does not exist")
 
         rows = [[column.name, column.datatype.name()] for column in table.columns]
         return QueryResult(
-            True,
-            f"Describing table {self.table_name}",
-            ["Column", "Type"],
-            rows,
+            success=True,
+            message=f"Describing table {self.table_name}",
+            columns=["Column", "Type"],
+            rows=rows,
         )

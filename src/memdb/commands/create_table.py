@@ -1,8 +1,12 @@
+import re
+
 from memdb.commands.base import QueryInterface
 from memdb.data.column import Column
 from memdb.data.db_data import DBData
 from memdb.commands.query_result import QueryResult
 from memdb.data.table import Table
+
+_VALID_TABLE_NAME_RE = re.compile(r"^\w+$")
 
 
 class CreateTableQuery(QueryInterface):
@@ -11,11 +15,15 @@ class CreateTableQuery(QueryInterface):
         self.columns = columns
 
     def run(self, data: DBData) -> QueryResult:
-        if not self.table_name or not self.table_name.isalpha():
-            raise ValueError(f"Invalid table name: {self.table_name}")
+        if not _VALID_TABLE_NAME_RE.fullmatch(self.table_name):
+            return QueryResult(success=False, message=f"invalid table name: {self.table_name}")
 
         if self.table_name in data.tables:
-            return QueryResult(False, "table already exists")
+            return QueryResult(success=False, message="table already exists")
+
+        column_names = [column.name for column in self.columns]
+        if len(column_names) != len(set(column_names)):
+            return QueryResult(success=False, message="duplicate column name")
 
         data.tables[self.table_name] = Table(self.table_name, self.columns)
-        return QueryResult(True, f"table {self.table_name} created")
+        return QueryResult(success=True, message=f"table {self.table_name} created")
