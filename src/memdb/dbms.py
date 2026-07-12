@@ -1,6 +1,6 @@
 from memdb.data.db_data import DBData
-from memdb.query_factory import QueryFactory
-from memdb.query_result import QueryResult
+from memdb.commands.query_factory import QueryFactory
+from memdb.commands.query_result import QueryResult
 
 
 class DBMS:

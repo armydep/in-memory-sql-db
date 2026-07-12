@@ -1,5 +1,5 @@
 from memdb.data.cell_metadata import CellMetadata
-from memdb.types.datatype import Datatype
+from memdb.data.types.datatype import Datatype
 
 
 class Column:

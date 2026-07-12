@@ -1,6 +1,6 @@
 from memdb.commands.base import QueryInterface
 from memdb.data.db_data import DBData
-from memdb.query_result import QueryResult
+from memdb.commands.query_result import QueryResult
 
 
 class SelectQuery(QueryInterface):
