@@ -33,7 +33,7 @@ class PrintResultTest(unittest.TestCase):
     def test_prints_failed_result_as_error(self):
         lines = []
 
-        print_result(QueryResult(False, "bad query"), lines.append)
+        print_result(QueryResult(success=False, message="bad query"), lines.append)
 
         self.assertEqual(lines, ["Error: bad query"])
 

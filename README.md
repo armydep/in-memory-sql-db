@@ -5,8 +5,10 @@ An in-memory relational SQL database, built as an embeddable Python library
 
 ## Status
 
-Repository scaffold: package structure and class skeletons only. Statement
-parsing and execution logic are implemented incrementally in later steps.
+Working in-memory database with an interactive CLI. `DESCRIBE DB`,
+`DESCRIBE TABLE`, `CREATE TABLE`, `DROP TABLE`, `SELECT`, and `INSERT` are
+implemented end to end (parsed and executed). `DELETE` and `UPDATE` are
+parsed but not yet executed (`run()` still raises `NotImplementedError`).
 
 ## Layout
 
