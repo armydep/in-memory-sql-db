@@ -50,3 +50,30 @@ memdb demo
 # or
 python -m memdb demo
 ```
+
+## Roadmap / TODO
+
+1. **Persistent storage** — implement additional `DBStorage` backends and
+   evaluate cloud deployment options such as object storage and persistent
+   volumes. Define a versioned on-disk format, atomic writes, backups, and
+   recovery behavior.
+2. **Multi-user support** — add a server-facing session model and a locking
+   mechanism for safe concurrent access. Start with database- or table-level
+   locks, then consider row-level locks and deadlock handling as needed.
+3. **Complete core SQL operations** — implement execution for `UPDATE` and
+   `DELETE`, followed by column projections, richer `WHERE` expressions,
+   ordering, limits, and joins.
+4. **Transactions** — support `BEGIN`, `COMMIT`, and `ROLLBACK`, with clearly
+   defined isolation and failure semantics.
+5. **Schema constraints** — add primary keys, uniqueness, nullability, default
+   values, and foreign keys with consistent validation and error messages.
+6. **Indexes and query planning** — introduce indexes for common lookup paths,
+   then add a simple query plan representation and performance benchmarks.
+7. **Network API and security** — expose the database through a protocol or
+   service API, with authentication, authorization, encrypted connections,
+   resource limits, and query timeouts.
+8. **Operational tooling** — add structured logging, metrics, health checks,
+   import/export commands, and tools for inspecting active sessions and locks.
+9. **CLI improvements** — add command history, multiline statements,
+   semicolon-delimited input, configurable output formats, and helpful
+   commands such as `.help`, `.tables`, and `.quit`.
