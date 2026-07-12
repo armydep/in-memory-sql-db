@@ -8,5 +8,8 @@ version = "0.1.0"
 description = "In-memory SQL relational database"
 requires-python = ">=3.11"
 
+[project.scripts]
+memdb = "memdb.__main__:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -1,32 +1,24 @@
-from memdb import DBMS
-from memdb.commands.query_factory import QueryFactory
-from memdb.storage.in_memory_storage import InMemoryStorage
+import argparse
 
-_COMMANDS = [
-    "describe db",
-    "create table bitcoins {id int, amount int}",
-    "describe db",
-    "create table students {id int, name str}",
-    "describe db",
-    "describe table students",
-    "describe table bitcoins",
-    "create table departments {id int, dep_name str}",
-    "describe db",
-    "drop table students",
-    "describe db",
-    "insert (id, dep_name) into departments (23, SE)",
-    "insert (id, dep_name) into departments (23, ab33dd)",
-    "select * from departments",
-]
+from memdb.cli import main as cli_main
+from memdb.demo import main as demo_main
 
 
-def main() -> None:
-    dbms = DBMS(storage=InMemoryStorage(), query_factory=QueryFactory())
-    dbms.init()
-    print(f"memdb initialized: {dbms}")
-    for i, command in enumerate(_COMMANDS, start=1):
-        result = dbms.execute(command)
-        print(f"memdb executed-{i}: {result}")
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(prog="memdb")
+    parser.add_argument(
+        "mode",
+        nargs="?",
+        choices=("cli", "demo"),
+        default="cli",
+        help="start the interactive CLI (default) or run the built-in demo",
+    )
+    args = parser.parse_args(argv)
+
+    if args.mode == "demo":
+        demo_main()
+    else:
+        cli_main()
 
 
 if __name__ == "__main__":

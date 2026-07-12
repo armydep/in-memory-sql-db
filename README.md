@@ -27,3 +27,24 @@ python -m unittest discover -s tests
 ```
 
 No runtime dependencies (standard library only).
+
+## CLI
+
+After installing the package, start the interactive SQL prompt with either:
+
+```bash
+memdb
+# or
+python -m memdb
+```
+
+Enter one query per line. Use `exit`, `quit`, Ctrl-D, or Ctrl-C to leave the
+prompt. The in-memory database is retained until the CLI exits.
+
+The original built-in command sequence remains available as a demo:
+
+```bash
+memdb demo
+# or
+python -m memdb demo
+```
