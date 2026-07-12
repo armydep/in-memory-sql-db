@@ -44,8 +44,8 @@ class QueryFactoryCreateTest(unittest.TestCase):
 
     def test_insert_delegates_to_parser(self):
         self._assert_delegates_to_parser(
-            'insert (1, "alice") into users',
-            InsertQuery("users", [1, "alice"]),
+            'insert (id, name) into users (1, "alice")',
+            InsertQuery("users", {"id": 1, "name": "alice"}),
         )
 
     def test_delete_delegates_to_parser(self):

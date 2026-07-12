@@ -61,11 +61,11 @@ class QueryParserParseTest(unittest.TestCase):
         self.assertEqual(query.table_name, "users")
 
     def test_insert_returns_insert_query(self):
-        query = self.parser.parse('insert (1, "alice") into users')
+        query = self.parser.parse('insert (id, name) into users (1, "alice")')
 
         self.assertIsInstance(query, InsertQuery)
         self.assertEqual(query.table_name, "users")
-        self.assertEqual(query.values, [1, "alice"])
+        self.assertEqual(query.values, {"id": 1, "name": "alice"})
 
     def test_delete_returns_delete_query(self):
         query = self.parser.parse("delete from users where {id = 5}")
@@ -85,16 +85,28 @@ class QueryParserParseTest(unittest.TestCase):
         self.assertEqual(query.value, 5)
 
     def test_insert_quoted_true_and_false_are_kept_as_strings(self):
-        query = self.parser.parse('insert ("true", "false") into flags')
+        query = self.parser.parse(
+            'insert (first, second) into flags ("true", "false")'
+        )
 
         self.assertIsInstance(query, InsertQuery)
-        self.assertEqual(query.values, ["true", "false"])
+        self.assertEqual(query.values, {"first": "true", "second": "false"})
 
     def test_insert_unquoted_true_and_false_are_booleans(self):
-        query = self.parser.parse("insert (true, false) into flags")
+        query = self.parser.parse(
+            "insert (first, second) into flags (true, false)"
+        )
 
         self.assertIsInstance(query, InsertQuery)
-        self.assertEqual(query.values, [True, False])
+        self.assertEqual(query.values, {"first": True, "second": False})
+
+    def test_insert_rejects_different_number_of_names_and_values(self):
+        with self.assertRaisesRegex(ValueError, "same length"):
+            self.parser.parse('insert (id, name) into users (1)')
+
+    def test_insert_rejects_duplicate_column_names(self):
+        with self.assertRaisesRegex(ValueError, "duplicate column names"):
+            self.parser.parse('insert (id, id) into users (1, 2)')
 
     def test_parse_raises_for_unsupported_query(self):
         with self.assertRaises(ValueError):

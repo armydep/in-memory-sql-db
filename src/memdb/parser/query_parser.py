@@ -26,7 +26,7 @@ _DESCRIBE_TABLE_RE = re.compile(
 _DROP_TABLE_RE = re.compile(r"^drop\s+table\s+(?P<table>\w+)$", re.IGNORECASE)
 _SELECT_RE = re.compile(r"^select\s+\*\s+from\s+(?P<table>\w+)$", re.IGNORECASE)
 _INSERT_RE = re.compile(
-    r"^insert\s*\((?P<values>.*?)\)\s+into\s+(?P<table>\w+)$",
+    r"^insert\s*\((?P<rows>.*?)\)\s+into\s+(?P<table>\w+)\s*\((?P<values>.*?)\)$",
     re.IGNORECASE,
 )
 _DELETE_RE = re.compile(
@@ -76,9 +76,21 @@ class QueryParser:
             return SelectQuery(match.group("table"))
 
         if match := _INSERT_RE.fullmatch(query):
+            row_names = [
+                row.strip() for row in match.group("rows").split(",")
+                if row.strip()
+            ]
+            values = self._parse_values(match.group("values"))
+            if len(row_names) != len(values):
+                raise ValueError(
+                    "INSERT row names and values must have the same length"
+                )
+            if len(row_names) != len(set(row_names)):
+                raise ValueError("INSERT contains duplicate column names")
+
             return InsertQuery(
                 match.group("table"),
-                self._parse_values(match.group("values")),
+                dict(zip(row_names, values)),
             )
 
         if match := _DELETE_RE.fullmatch(query):

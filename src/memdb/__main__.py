@@ -14,6 +14,9 @@ _COMMANDS = [
     "describe db",
     "drop table students",
     "describe db",
+    "insert (id, dep_name) into departments (23, SE)",
+    "insert (id, dep_name) into departments (23, ab33dd)",
+    "select * from departments",
 ]
 
 
