@@ -8,4 +8,19 @@ class SelectQuery(QueryInterface):
         self.table_name = table_name
 
     def run(self, data: DBData) -> QueryResult:
-        raise NotImplementedError
+        table = data.tables.get(self.table_name)
+        if table is None:
+            return QueryResult(
+                success=False,
+                message=f"table {self.table_name} does not exist",
+            )
+
+        return QueryResult(
+            success=True,
+            message=f"Selected rows from table {self.table_name}",
+            columns=[column.name for column in table.columns],
+            rows=[
+                [cell.data.value() for cell in row.cells]
+                for row in table.rows
+            ],
+        )
