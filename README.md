@@ -11,10 +11,14 @@ stdlib, and eventually the wider ecosystem).
 
 ## Status
 
-Working in-memory database with an interactive CLI. `DESCRIBE DB`,
-`DESCRIBE TABLE`, `CREATE TABLE`, `DROP TABLE`, `SELECT`, and `INSERT` are
-implemented end to end (parsed and executed). `DELETE` and `UPDATE` are
-parsed but not yet executed (`run()` still raises `NotImplementedError`).
+Current release: **v1.0.0** — CLI tool with the minimal query set, no
+persistence (see `CHANGELOG.md`). `main` is development toward the next
+version (persistent storage, per the roadmap below).
+
+`DESCRIBE DB`, `DESCRIBE TABLE`, `CREATE TABLE`, `DROP TABLE`, `SELECT`,
+and `INSERT` are implemented end to end (parsed and executed). `DELETE` and
+`UPDATE` are parsed but not yet executed (`run()` still raises
+`NotImplementedError`).
 
 ## Layout
 

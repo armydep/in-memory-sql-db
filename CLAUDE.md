@@ -143,6 +143,16 @@ stays a string), anything else → str.
 - Do not create pull requests; commit directly with clear messages.
 - Run the full test suite and `python -m memdb demo` before committing.
 
+## Releases
+
+Trunk-based development: releases are **annotated tags on `main`**
+(`v1.0.0`, semantic versioning), documented in `CHANGELOG.md`, with the
+full step-by-step process and commands in `docs/release-process.md`.
+Released tags are immutable — never move, delete, or reuse one. Release
+branches (`release/1.x`) are created lazily from the tag only when a
+hotfix to an old version is actually needed. `pyproject.toml`'s version
+must always match the latest tag.
+
 ## Decision record (why things are the way they are)
 
 - Hand-written parser, chosen over a parsing library (learning goal).
