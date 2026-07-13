@@ -12,8 +12,10 @@ stdlib, and eventually the wider ecosystem).
 ## Status
 
 Current release: **v1.0.0** — CLI tool with the minimal query set, no
-persistence (see `CHANGELOG.md`). `main` is development toward the next
-version (persistent storage, per the roadmap below).
+persistence (see `CHANGELOG.md`). This project follows **GitFlow**
+(`docs/release-process.md`): `main` holds the released state; `develop`
+is the integration branch toward the next version (persistent storage,
+per the roadmap below).
 
 `DESCRIBE DB`, `DESCRIBE TABLE`, `CREATE TABLE`, `DROP TABLE`, `SELECT`,
 and `INSERT` are implemented end to end (parsed and executed). `DELETE` and

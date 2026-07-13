@@ -135,23 +135,30 @@ stays a string), anything else → str.
    objects (commands unwrap via `cell.data.value()`).
 9. Tests use stdlib `unittest` (+ `unittest.mock`), not pytest.
 
-## Git workflow
+## Git workflow (GitFlow)
 
-- Work on `main` (the owner also pushes to it from their machine):
-  **always `git fetch origin main` and reconcile before pushing.**
+This project follows **GitFlow** — full flow and commands in
+`docs/release-process.md`. In short:
+
+- **Never commit directly to `main`** — it holds released state only and
+  receives only `--no-ff` merges from `release/*` / `hotfix/*` branches.
+- Day-to-day work happens on **`feature/<name>` branches cut from
+  `develop`**, merged back into `develop` with `--no-ff`. Small doc-only
+  changes may go directly on `develop`.
+- The owner also pushes from their machine: **always `git fetch origin
+  <branch>` and reconcile before pushing.**
 - Never force-push; never rewrite published history.
-- Do not create pull requests; commit directly with clear messages.
 - Run the full test suite and `python -m memdb demo` before committing.
 
 ## Releases
 
-Trunk-based development: releases are **annotated tags on `main`**
-(`v1.0.0`, semantic versioning), documented in `CHANGELOG.md`, with the
-full step-by-step process and commands in `docs/release-process.md`.
-Released tags are immutable — never move, delete, or reuse one. Release
-branches (`release/1.x`) are created lazily from the tag only when a
-hotfix to an old version is actually needed. `pyproject.toml`'s version
-must always match the latest tag.
+Releases follow the GitFlow release flow (`docs/release-process.md`):
+`release/x.y.z` branch from `develop` → version bump + `CHANGELOG.md`
+entry on it → `--no-ff` merge to `main` → annotated tag `vx.y.z` on the
+merge commit → back-merge into `develop`. Semantic versioning; released
+tags are immutable; `pyproject.toml`'s version always matches the latest
+tag on `main`. Automated sessions cannot push tags or create GitHub
+Releases (403) — the owner runs those two steps from their machine.
 
 ## Decision record (why things are the way they are)
 
