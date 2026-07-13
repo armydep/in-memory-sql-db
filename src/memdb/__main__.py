@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 
 from memdb.cli import main as cli_main
 from memdb.demo import main as demo_main
@@ -13,12 +14,17 @@ def main(argv: list[str] | None = None) -> None:
         default="cli",
         help="start the interactive CLI (default) or run the built-in demo",
     )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        help="path to a TOML configuration file",
+    )
     args = parser.parse_args(argv)
 
     if args.mode == "demo":
-        demo_main()
+        demo_main(config_path=args.config)
     else:
-        cli_main()
+        cli_main(config_path=args.config)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,9 @@
+from pathlib import Path
+
 from memdb import DBMS
 from memdb.commands.query_factory import QueryFactory
-from memdb.storage.in_memory_storage import InMemoryStorage
+from memdb.config import load_config
+from memdb.storage.factory import create_storage
 
 _COMMANDS = [
     "describe db",
@@ -20,8 +23,10 @@ _COMMANDS = [
 ]
 
 
-def main() -> None:
-    dbms = DBMS(storage=InMemoryStorage(), query_factory=QueryFactory())
+def main(config_path: Path | None = None) -> None:
+    config = load_config(config_path)
+    storage = create_storage(config.storage)
+    dbms = DBMS(storage=storage, query_factory=QueryFactory())
     dbms.init()
     print(f"memdb initialized: {dbms}")
     for index, command in enumerate(_COMMANDS, start=1):

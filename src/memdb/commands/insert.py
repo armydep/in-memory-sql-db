@@ -60,4 +60,8 @@ class InsertQuery(QueryInterface):
             cells.append(Cell(data_types[expected_type](value)))
 
         table.rows.append(Row(cells))
-        return QueryResult(success=True, message="row added successfully")
+        return QueryResult(
+            success=True,
+            message="row added successfully",
+            data_changed=True,
+        )

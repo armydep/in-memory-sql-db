@@ -18,4 +18,7 @@ class DBMS:
             raise RuntimeError("DBMS has not been initialized")
 
         query = self.query_factory.create(command)
-        return query.run(self.data)
+        result = query.run(self.data)
+        if result.success and result.data_changed:
+            self.storage.save(self.data)
+        return result

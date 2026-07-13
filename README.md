@@ -63,6 +63,19 @@ memdb demo
 python -m memdb demo
 ```
 
+## Storage configuration
+
+```bash
+memdb --config memdb.toml
+memdb demo --config memdb.toml
+```
+
+See `memdb.toml.example` for the available settings. With storage disabled,
+the CLI uses `InMemoryStorage`. When enabled, `implementation` must be the
+fully qualified name of a `DBStorage` subclass and `path` is passed to its
+constructor. `JsonFileStorage` stores a versioned JSON snapshot and replaces
+it atomically after each successful mutating command.
+
 ## Roadmap / TODO
 
 1. **Persistent storage** — implement additional `DBStorage` backends and
