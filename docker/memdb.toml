@@ -2,3 +2,9 @@
 enabled = true
 path = "/data/memdb.json"
 implementation = "memdb.storage.json_file_storage.JsonFileStorage"
+
+[server]
+# 0.0.0.0 so the port published by compose is reachable from the host;
+# inside the container "localhost" would accept no external connections.
+host = "0.0.0.0"
+port = 7654
