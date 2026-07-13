@@ -76,6 +76,42 @@ fully qualified name of a `DBStorage` subclass and `path` is passed to its
 constructor. `JsonFileStorage` stores a versioned JSON snapshot and replaces
 it atomically after each successful mutating command.
 
+## Docker
+
+Build the image and start an interactive container:
+
+```bash
+docker compose build
+docker compose run --rm memdb
+```
+
+Create some data, then exit the CLI:
+
+```text
+create table users {id int, name str}
+insert (id, name) into users (1, "alice")
+exit
+```
+
+Start a new container using the same named volume:
+
+```bash
+docker compose run --rm memdb
+```
+
+The following query should return the previously inserted row:
+
+```text
+select * from users
+```
+
+The `memdb-data` named volume stores `/data/memdb.json` independently of the
+container lifecycle. Remove the stored database intentionally with:
+
+```bash
+docker compose down --volumes
+```
+
 ## Roadmap / TODO
 
 1. **Persistent storage** — implement additional `DBStorage` backends and
