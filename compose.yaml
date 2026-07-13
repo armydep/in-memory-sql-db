@@ -1,0 +1,12 @@
+services:
+  memdb:
+    build:
+      context: .
+    image: memdb:local
+    stdin_open: true
+    tty: true
+    volumes:
+      - memdb-data:/data
+
+volumes:
+  memdb-data:

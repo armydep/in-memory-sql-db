@@ -1,0 +1,4 @@
+[storage]
+enabled = true
+path = "/data/memdb.json"
+implementation = "memdb.storage.json_file_storage.JsonFileStorage"
