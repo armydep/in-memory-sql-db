@@ -8,3 +8,4 @@ class QueryResult:
     message: Optional[str] = None
     columns: list[str] = field(default_factory=list)
     rows: list[list[Any]] = field(default_factory=list)
+    data_changed: bool = False

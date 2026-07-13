@@ -1,10 +1,13 @@
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from memdb import DBMS
 from memdb.commands.query_factory import QueryFactory
 from memdb.commands.query_result import QueryResult
-from memdb.storage.in_memory_storage import InMemoryStorage
+from memdb.config import load_config
+from memdb.storage.factory import create_storage
+from memdb.storage.setup_logging import log_storage_setup
 
 Input = Callable[[str], str]
 Output = Callable[[str], Any]
@@ -69,7 +72,13 @@ def run_repl(
             output(f"Unexpected error: {error}")
 
 
-def main() -> None:
-    dbms = DBMS(storage=InMemoryStorage(), query_factory=QueryFactory())
+def main(config_path: Path | None = None) -> None:
+    config = load_config(config_path)
+    storage = create_storage(config.storage)
+    log_storage_setup(config_path, config.storage, storage)
+    dbms = DBMS(
+        storage=storage,
+        query_factory=QueryFactory(),
+    )
     dbms.init()
     run_repl(dbms)

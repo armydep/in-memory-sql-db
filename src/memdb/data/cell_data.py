@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Any
+
+CellValue = bool | int | str | bytes
 
 
 class CellData(ABC):
     @abstractmethod
-    def value(self) -> Any:
+    def value(self) -> CellValue:
         raise NotImplementedError
 
 

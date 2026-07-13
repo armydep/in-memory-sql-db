@@ -32,6 +32,7 @@ class InsertQueryRunTest(unittest.TestCase):
         result = query.run(self.data)
 
         self.assertTrue(result.success)
+        self.assertTrue(result.data_changed)
         self.assertEqual(result.message, "row added successfully")
         self.assertEqual(len(self.data.tables["users"].rows), 1)
         self.assertEqual(

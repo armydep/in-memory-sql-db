@@ -15,6 +15,7 @@ class CreateTableQueryRunTest(unittest.TestCase):
         result = query.run(data)
 
         self.assertTrue(result.success)
+        self.assertTrue(result.data_changed)
         self.assertEqual(result.message, "table users created")
         self.assertIn("users", data.tables)
         self.assertEqual(data.tables["users"].name, "users")
@@ -28,6 +29,7 @@ class CreateTableQueryRunTest(unittest.TestCase):
         result = query.run(data)
 
         self.assertFalse(result.success)
+        self.assertFalse(result.data_changed)
         self.assertEqual(result.message, "table already exists")
 
     def test_run_accepts_table_name_with_digits_and_underscores(self):

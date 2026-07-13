@@ -13,6 +13,7 @@ class DropTableQueryRunTest(unittest.TestCase):
         result = DropTableQuery("users").run(data)
 
         self.assertTrue(result.success)
+        self.assertTrue(result.data_changed)
         self.assertEqual(result.message, "table users dropped")
         self.assertNotIn("users", data.tables)
 
@@ -20,6 +21,7 @@ class DropTableQueryRunTest(unittest.TestCase):
         result = DropTableQuery("users").run(DBData())
 
         self.assertFalse(result.success)
+        self.assertFalse(result.data_changed)
         self.assertEqual(result.message, "table users does not exist")
 
 

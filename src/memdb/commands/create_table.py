@@ -26,4 +26,8 @@ class CreateTableQuery(QueryInterface):
             return QueryResult(success=False, message="duplicate column name")
 
         data.tables[self.table_name] = Table(self.table_name, self.columns)
-        return QueryResult(success=True, message=f"table {self.table_name} created")
+        return QueryResult(
+            success=True,
+            message=f"table {self.table_name} created",
+            data_changed=True,
+        )
