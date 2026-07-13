@@ -2,3 +2,7 @@
 enabled = true
 path = "./data/memdb.json"
 implementation = "memdb.storage.json_file_storage.JsonFileStorage"
+
+[server]
+host = "127.0.0.1"
+port = 7654
