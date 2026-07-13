@@ -3,6 +3,12 @@
 An in-memory relational SQL database, built as an embeddable Python library
 (no network server in this phase).
 
+This is a **learning project**, and deliberately so on several fronts at
+once: how SQL databases and storage engines work internally, clean
+incremental project development, and Python itself — the language, its OOP
+model, and the best practices of the Python stack (packaging, testing,
+stdlib, and eventually the wider ecosystem).
+
 ## Status
 
 Working in-memory database with an interactive CLI. `DESCRIBE DB`,
