@@ -1,4 +1,5 @@
 import argparse
+import logging
 from pathlib import Path
 
 from memdb.cli import main as cli_main
@@ -6,6 +7,10 @@ from memdb.demo import main as demo_main
 
 
 def main(argv: list[str] | None = None) -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
     parser = argparse.ArgumentParser(prog="memdb")
     parser.add_argument(
         "mode",
