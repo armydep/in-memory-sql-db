@@ -18,5 +18,8 @@ USER memdb
 
 VOLUME ["/data"]
 
-ENTRYPOINT ["memdb"]
-CMD ["--config", "/etc/memdb/memdb.toml"]
+# --config lives in the entrypoint so that passing arguments (e.g. `demo`)
+# cannot silently drop persistence: `docker run memdb:local demo` runs
+# `memdb --config /etc/memdb/memdb.toml demo`.
+ENTRYPOINT ["memdb", "--config", "/etc/memdb/memdb.toml"]
+CMD []

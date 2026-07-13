@@ -4,7 +4,7 @@ from pathlib import Path
 
 from memdb.config import StorageConfig
 from memdb.storage.in_memory_storage import InMemoryStorage
-from memdb.storage.setup_logging import log_storage_setup
+from memdb.setup_logging import log_storage_setup
 
 
 class StorageSetupLoggingTest(unittest.TestCase):
@@ -15,7 +15,7 @@ class StorageSetupLoggingTest(unittest.TestCase):
             storage_path = root / "data" / "memdb.json"
 
             with self.assertLogs(
-                "memdb.storage.setup_logging", level="INFO"
+                "memdb.setup_logging", level="INFO"
             ) as captured:
                 log_storage_setup(
                     config_path=config_path,
@@ -41,7 +41,7 @@ class StorageSetupLoggingTest(unittest.TestCase):
 
     def test_logs_in_memory_defaults(self):
         with self.assertLogs(
-            "memdb.storage.setup_logging", level="INFO"
+            "memdb.setup_logging", level="INFO"
         ) as captured:
             log_storage_setup(
                 config_path=None,

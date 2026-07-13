@@ -7,7 +7,7 @@ from memdb.commands.query_factory import QueryFactory
 from memdb.commands.query_result import QueryResult
 from memdb.config import load_config
 from memdb.storage.factory import create_storage
-from memdb.storage.setup_logging import log_storage_setup
+from memdb.setup_logging import log_storage_setup
 
 Input = Callable[[str], str]
 Output = Callable[[str], Any]
