@@ -1,6 +1,6 @@
 import re
 
-from memdb.commands.base import QueryInterface
+from memdb.commands.base import QueryAccessMode, QueryInterface
 from memdb.data.column import Column
 from memdb.data.db_data import DBData
 from memdb.commands.query_result import QueryResult
@@ -10,6 +10,8 @@ _VALID_TABLE_NAME_RE = re.compile(r"^\w+$")
 
 
 class CreateTableQuery(QueryInterface):
+    access_mode = QueryAccessMode.WRITE
+
     def __init__(self, table_name: str, columns: list[Column]):
         self.table_name = table_name
         self.columns = columns
