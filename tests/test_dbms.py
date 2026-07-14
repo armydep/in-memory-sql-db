@@ -33,7 +33,24 @@ class DBMSTest(unittest.TestCase):
 
         self.dbms.execute("a mutating query")
 
-        self.storage.save.assert_called_once_with(self.data)
+        self.storage.save.assert_called_once()
+        saved_data = self.storage.save.call_args.args[0]
+        self.assertIsNot(saved_data, self.data)
+        self.assertIs(self.dbms.data, saved_data)
+
+    def test_failed_save_does_not_publish_mutated_working_copy(self):
+        def mutate(data):
+            data.tables["uncommitted"] = Mock()
+            return QueryResult(success=True, data_changed=True)
+
+        self.query.run.side_effect = mutate
+        self.storage.save.side_effect = OSError("disk full")
+
+        with self.assertRaisesRegex(OSError, "disk full"):
+            self.dbms.execute("a mutating query")
+
+        self.assertIs(self.dbms.data, self.data)
+        self.assertNotIn("uncommitted", self.dbms.data.tables)
 
     def test_does_not_save_after_read_only_query(self):
         self.query.access_mode = QueryAccessMode.READ

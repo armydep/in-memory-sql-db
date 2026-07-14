@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from memdb.commands.base import QueryAccessMode
 from memdb.commands.query_factory import QueryFactory
 from memdb.commands.query_result import QueryResult
@@ -29,7 +31,9 @@ class DBMS:
             if self.data is None:
                 raise RuntimeError("DBMS has not been initialized")
 
-            result = query.run(self.data)
+            working_data = deepcopy(self.data)
+            result = query.run(working_data)
             if result.success and result.data_changed:
-                self.storage.save(self.data)
+                self.storage.save(working_data)
+                self.data = working_data
             return result
