@@ -29,7 +29,9 @@ class QueryRequestHandler(socketserver.StreamRequestHandler):
             if len(line) > MAX_LINE_BYTES:
                 logger.warning("session %d sent an oversized line", session_id)
                 self.wfile.write(
-                    encode_result(QueryResult(False, "request line is too long"))
+                    encode_result(
+                        QueryResult(success=False, message="request line is too long")
+                    )
                 )
                 break
 
@@ -37,12 +39,12 @@ class QueryRequestHandler(socketserver.StreamRequestHandler):
                 command = line.rstrip(b"\r\n").decode("utf-8")
                 result = self.server.dbms.execute(command)
             except UnicodeDecodeError:
-                result = QueryResult(False, "request must be valid UTF-8")
+                result = QueryResult(success=False, message="request must be valid UTF-8")
             except ValueError as error:
-                result = QueryResult(False, str(error))
+                result = QueryResult(success=False, message=str(error))
             except Exception:
                 logger.exception("session %d query execution failed", session_id)
-                result = QueryResult(False, "internal server error")
+                result = QueryResult(success=False, message="internal server error")
 
             self.wfile.write(encode_result(result))
 

@@ -17,8 +17,8 @@ _DEFAULT_PORT = 7654
 class LineClient:
     """TCP client for the newline-delimited memdb protocol.
 
-    Sends one line per request and reads one line per response. In the
-    The server returns one JSON-encoded QueryResult for each request.
+    Sends one SQL command per line; the server returns one JSON-encoded
+    QueryResult line for each request.
     """
 
     def __init__(self, host: str = _DEFAULT_HOST, port: int = _DEFAULT_PORT):

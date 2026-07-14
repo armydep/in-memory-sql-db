@@ -7,7 +7,6 @@ from types import FrameType
 from memdb.commands.query_factory import QueryFactory
 from memdb.config import load_config
 from memdb.dbms import DBMS
-from memdb.server.config import load_server_config
 from memdb.server.tcp_server import DBMSServer
 from memdb.setup_logging import log_storage_setup
 from memdb.storage.factory import create_storage
@@ -24,15 +23,22 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--config",
         type=Path,
-        help="path to a TOML configuration file with a [server] section",
+        help="path to a TOML configuration file with [server] and [storage] sections",
     )
     args = parser.parse_args(argv)
-    server_config = load_server_config(args.config)
-    app_config = load_config(args.config)
-    storage = create_storage(app_config.storage)
-    log_storage_setup(args.config, app_config.storage, storage)
-    dbms = DBMS(storage=storage, query_factory=QueryFactory())
-    dbms.init()
+
+    # Startup failures (missing/invalid config, corrupt snapshot) are
+    # operator errors, not bugs: report one line and a non-zero exit
+    # instead of a traceback.
+    try:
+        config = load_config(args.config)
+        storage = create_storage(config.storage)
+        log_storage_setup(args.config, config.storage, storage)
+        dbms = DBMS(storage=storage, query_factory=QueryFactory())
+        dbms.init()
+    except (ValueError, OSError) as error:
+        logger.error("startup failed: %s", error)
+        raise SystemExit(1) from error
 
     def request_shutdown(signum: int, frame: FrameType | None) -> None:
         raise SystemExit(0)
@@ -41,9 +47,9 @@ def main(argv: list[str] | None = None) -> None:
     # immediately instead of closing the listening socket first.
     signal.signal(signal.SIGTERM, request_shutdown)
 
-    with DBMSServer(server_config.host, server_config.port, dbms) as server:
+    with DBMSServer(config.server.host, config.server.port, dbms) as server:
         logger.info(
-            "memdb server listening on %s:%d", server_config.host, server_config.port
+            "memdb server listening on %s:%d", config.server.host, config.server.port
         )
         try:
             server.serve_forever()
