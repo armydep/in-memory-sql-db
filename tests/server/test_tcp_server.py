@@ -2,14 +2,18 @@ import socket
 import threading
 import unittest
 
-from memdb.server.tcp_server import MAX_LINE_BYTES, EchoServer
+from memdb.commands.query_factory import QueryFactory
+from memdb.dbms import DBMS
+from memdb.protocol import decode_result
+from memdb.server.tcp_server import DBMSServer, MAX_LINE_BYTES
+from memdb.storage.in_memory_storage import InMemoryStorage
 
 
-class EchoServerTest(unittest.TestCase):
+class DBMSServerTest(unittest.TestCase):
     def setUp(self):
-        # Port 0 asks the OS for any free port; the chosen one is read
-        # back from server_address, so tests never collide on a port.
-        self.server = EchoServer("127.0.0.1", 0)
+        self.dbms = DBMS(InMemoryStorage(), QueryFactory())
+        self.dbms.init()
+        self.server = DBMSServer("127.0.0.1", 0, self.dbms)
         self.port = self.server.server_address[1]
         self.server_thread = threading.Thread(
             target=self.server.serve_forever, daemon=True
@@ -27,55 +31,61 @@ class EchoServerTest(unittest.TestCase):
         return connection
 
     @staticmethod
-    def _send_line(connection: socket.socket, line: bytes) -> bytes:
+    def _send_line(connection: socket.socket, line: bytes):
         connection.sendall(line)
         reader = connection.makefile("rb")
         try:
-            return reader.readline()
+            return decode_result(reader.readline())
         finally:
             reader.close()
 
-    def test_echoes_a_line_back(self):
-        connection = self._connect()
+    def test_executes_queries_against_shared_database(self):
+        first = self._connect()
+        second = self._connect()
 
-        response = self._send_line(connection, b"select * from users\n")
+        created = self._send_line(first, b"create table users {id int, name str}\n")
+        inserted = self._send_line(
+            second, b'insert (id, name) into users (1, "alice")\n'
+        )
+        selected = self._send_line(first, b"select * from users\n")
 
-        self.assertEqual(response, b"select * from users\n")
+        self.assertTrue(created.success)
+        self.assertTrue(inserted.success)
+        self.assertEqual(selected.columns, ["id", "name"])
+        self.assertEqual(selected.rows, [[1, "alice"]])
 
-    def test_echoes_multiple_lines_on_one_connection(self):
+    def test_invalid_query_does_not_close_session(self):
         connection = self._connect()
         reader = connection.makefile("rb")
         self.addCleanup(reader.close)
 
-        connection.sendall(b"first\n")
-        self.assertEqual(reader.readline(), b"first\n")
-        connection.sendall(b"second\n")
-        self.assertEqual(reader.readline(), b"second\n")
+        connection.sendall(b"not sql\n")
+        self.assertFalse(decode_result(reader.readline()).success)
+        connection.sendall(b"describe db\n")
+        self.assertTrue(decode_result(reader.readline()).success)
 
-    def test_strips_carriage_return_from_clients_using_crlf(self):
-        connection = self._connect()
+    def test_invalid_utf8_returns_failure(self):
+        result = self._send_line(self._connect(), b"\xff\n")
 
-        response = self._send_line(connection, b"hello\r\n")
+        self.assertFalse(result.success)
+        self.assertIn("UTF-8", result.message)
 
-        self.assertEqual(response, b"hello\n")
-
-    def test_serves_a_client_while_another_connection_sits_idle(self):
-        # With one thread per connection, an idle client must not block
-        # others; a sequential accept-then-handle server would hang here.
+    def test_serves_client_while_another_connection_is_idle(self):
         idle_connection = self._connect()
         active_connection = self._connect()
 
-        response = self._send_line(active_connection, b"ping\n")
+        response = self._send_line(active_connection, b"describe db\n")
 
-        self.assertEqual(response, b"ping\n")
+        self.assertTrue(response.success)
         idle_connection.close()
 
     def test_rejects_oversized_line(self):
-        connection = self._connect()
+        result = self._send_line(
+            self._connect(), b"x" * (MAX_LINE_BYTES + 1) + b"\n"
+        )
 
-        response = self._send_line(connection, b"x" * (MAX_LINE_BYTES + 1) + b"\n")
-
-        self.assertEqual(response, b"error: line too long\n")
+        self.assertFalse(result.success)
+        self.assertIn("too long", result.message)
 
 
 if __name__ == "__main__":

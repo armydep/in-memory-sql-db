@@ -3,6 +3,10 @@ import socket
 from collections.abc import Callable
 from typing import Any
 
+from memdb.cli import print_result
+from memdb.commands.query_result import QueryResult
+from memdb.protocol import decode_result
+
 Input = Callable[[str], str]
 Output = Callable[[str], Any]
 
@@ -14,8 +18,7 @@ class LineClient:
     """TCP client for the newline-delimited memdb protocol.
 
     Sends one line per request and reads one line per response. In the
-    echo phase the response is the request itself; later phases return a
-    JSON-encoded QueryResult over the same framing.
+    The server returns one JSON-encoded QueryResult for each request.
     """
 
     def __init__(self, host: str = _DEFAULT_HOST, port: int = _DEFAULT_PORT):
@@ -26,17 +29,17 @@ class LineClient:
 
     def connect(self) -> None:
         self._socket = socket.create_connection((self.host, self.port))
-        self._reader = self._socket.makefile("r", encoding="utf-8", newline="\n")
+        self._reader = self._socket.makefile("rb")
 
-    def send(self, line: str) -> str:
+    def execute(self, command: str) -> QueryResult:
         if self._socket is None or self._reader is None:
             raise RuntimeError("client is not connected")
 
-        self._socket.sendall(f"{line}\n".encode("utf-8"))
+        self._socket.sendall(f"{command}\n".encode("utf-8"))
         response = self._reader.readline()
         if not response:
             raise ConnectionError("server closed the connection")
-        return response.rstrip("\n")
+        return decode_result(response)
 
     def close(self) -> None:
         if self._reader is not None:
@@ -60,7 +63,7 @@ def run_repl(
     output: Output = print,
 ) -> None:
     output(f"connected to memdb server at {client.host}:{client.port}")
-    output("Enter a message, or type 'exit' to quit.")
+    output("Enter a query, or type 'exit' to quit.")
 
     while True:
         try:
@@ -75,9 +78,12 @@ def run_repl(
             return
 
         try:
-            output(client.send(line))
+            print_result(client.execute(line), output)
         except (ConnectionError, OSError) as error:
             output(f"connection lost: {error}")
+            return
+        except ValueError as error:
+            output(f"protocol error: {error}")
             return
 
 

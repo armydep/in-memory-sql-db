@@ -14,7 +14,7 @@ services:
     image: memdb:local
     entrypoint: ["python", "-m", "memdb.server", "--config", "/etc/memdb/memdb.toml"]
     ports:
-      - "7654:7654"
+      - "127.0.0.1:7654:7654"
     volumes:
       - memdb-data:/data
 

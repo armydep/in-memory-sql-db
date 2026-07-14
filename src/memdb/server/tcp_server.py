@@ -2,6 +2,10 @@ import logging
 import socketserver
 from itertools import count
 
+from memdb.commands.query_result import QueryResult
+from memdb.dbms import DBMS
+from memdb.protocol import encode_result
+
 logger = logging.getLogger(__name__)
 
 # Requests are newline-delimited lines; a client that never sends a newline
@@ -9,14 +13,8 @@ logger = logging.getLogger(__name__)
 MAX_LINE_BYTES = 64 * 1024
 
 
-class EchoRequestHandler(socketserver.StreamRequestHandler):
-    """Handle one client connection: echo every received line back.
-
-    Placeholder protocol for the multi-user phase: it exercises the full
-    connection lifecycle (accept, session, line framing, disconnect)
-    without touching the DBMS. Later phases replace the echo with
-    parse/execute against the shared database.
-    """
+class QueryRequestHandler(socketserver.StreamRequestHandler):
+    """Execute newline-delimited SQL against the server's shared DBMS."""
 
     def handle(self) -> None:
         session_id = self.server.next_session_id()
@@ -30,22 +28,36 @@ class EchoRequestHandler(socketserver.StreamRequestHandler):
                 break
             if len(line) > MAX_LINE_BYTES:
                 logger.warning("session %d sent an oversized line", session_id)
-                self.wfile.write(b"error: line too long\n")
+                self.wfile.write(
+                    encode_result(QueryResult(False, "request line is too long"))
+                )
                 break
 
-            self.wfile.write(line.rstrip(b"\r\n") + b"\n")
+            try:
+                command = line.rstrip(b"\r\n").decode("utf-8")
+                result = self.server.dbms.execute(command)
+            except UnicodeDecodeError:
+                result = QueryResult(False, "request must be valid UTF-8")
+            except ValueError as error:
+                result = QueryResult(False, str(error))
+            except Exception:
+                logger.exception("session %d query execution failed", session_id)
+                result = QueryResult(False, "internal server error")
+
+            self.wfile.write(encode_result(result))
 
         logger.info("session %d disconnected", session_id)
 
 
-class EchoServer(socketserver.ThreadingTCPServer):
+class DBMSServer(socketserver.ThreadingTCPServer):
     """Thread-per-connection TCP server: one thread per accepted client."""
 
     allow_reuse_address = True
     daemon_threads = True
 
-    def __init__(self, host: str, port: int) -> None:
-        super().__init__((host, port), EchoRequestHandler)
+    def __init__(self, host: str, port: int, dbms: DBMS) -> None:
+        super().__init__((host, port), QueryRequestHandler)
+        self.dbms = dbms
         self._session_ids = count(1)
 
     def next_session_id(self) -> int:

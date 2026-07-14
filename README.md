@@ -1,7 +1,7 @@
 # in-memory-sql-db
 
-An in-memory relational SQL database, built as an embeddable Python library
-(no network server in this phase).
+An in-memory relational SQL database, available as an embeddable Python
+library, local CLI, and a basic multi-user TCP server.
 
 This is a **learning project**, and deliberately so on several fronts at
 once: how SQL databases and storage engines work internally, clean
@@ -76,27 +76,39 @@ fully qualified name of a `DBStorage` subclass and `path` is passed to its
 constructor. `JsonFileStorage` stores a versioned JSON snapshot and replaces
 it atomically after each successful mutating command.
 
-## Docker
+## TCP server and client
 
-Build the image and start an interactive container:
+Start the server locally and connect from a second terminal:
 
 ```bash
-docker compose build
-docker compose run --rm memdb
+python -m memdb.server --config memdb.toml.example
+python -m memdb.client
 ```
 
-Create some data, then exit the CLI:
+The server owns one shared `DBMS`. Each client connection runs in its own
+thread, while a database-wide lock serializes query execution and persistence.
+Requests are UTF-8 SQL lines and responses are JSON-encoded query results.
+
+## Docker
+
+Build and start the persistent server:
+
+```bash
+docker compose up --build memdb-server
+```
+
+Connect from another terminal with `python -m memdb.client`. Create data:
 
 ```text
 create table users {id int, name str}
 insert (id, name) into users (1, "alice")
-exit
 ```
 
-Start a new container using the same named volume:
+Stop and recreate the container, then reconnect:
 
 ```bash
-docker compose run --rm memdb
+docker compose down
+docker compose up memdb-server
 ```
 
 The following query should return the previously inserted row:
@@ -106,7 +118,9 @@ select * from users
 ```
 
 The `memdb-data` named volume stores `/data/memdb.json` independently of the
-container lifecycle. Remove the stored database intentionally with:
+container lifecycle. Only `memdb-server` should use that snapshot while the
+server is running. The published port is restricted to host loopback by
+default. Remove the stored database intentionally with:
 
 ```bash
 docker compose down --volumes
