@@ -33,7 +33,24 @@ class DBMSTest(unittest.TestCase):
 
         self.dbms.execute("a mutating query")
 
-        self.storage.save.assert_called_once_with(self.data)
+        self.storage.save.assert_called_once()
+        saved_data = self.storage.save.call_args.args[0]
+        self.assertIsNot(saved_data, self.data)
+        self.assertIs(self.dbms.data, saved_data)
+
+    def test_failed_save_does_not_publish_mutated_working_copy(self):
+        def mutate(data):
+            data.tables["uncommitted"] = Mock()
+            return QueryResult(success=True, data_changed=True)
+
+        self.query.run.side_effect = mutate
+        self.storage.save.side_effect = OSError("disk full")
+
+        with self.assertRaisesRegex(OSError, "disk full"):
+            self.dbms.execute("a mutating query")
+
+        self.assertIs(self.dbms.data, self.data)
+        self.assertNotIn("uncommitted", self.dbms.data.tables)
 
     def test_does_not_save_after_read_only_query(self):
         self.query.access_mode = QueryAccessMode.READ
@@ -94,7 +111,7 @@ class DBMSTest(unittest.TestCase):
         self.assertFalse(second.is_alive())
         self.assertTrue(second_started.is_set())
 
-    def test_write_query_blocks_read_only_query(self):
+    def test_read_only_query_can_run_while_write_query_is_active(self):
         writer_started = Event()
         release_writer = Event()
         reader_started = Event()
@@ -123,7 +140,7 @@ class DBMSTest(unittest.TestCase):
         self.assertTrue(writer_started.wait(timeout=1))
         reader.start()
 
-        self.assertFalse(reader_started.wait(timeout=0.1))
+        self.assertTrue(reader_started.wait(timeout=1))
         release_writer.set()
         writer.join(timeout=1)
         reader.join(timeout=1)
@@ -132,7 +149,7 @@ class DBMSTest(unittest.TestCase):
         self.assertFalse(reader.is_alive())
         self.assertTrue(reader_started.is_set())
 
-    def test_read_only_query_blocks_write_query(self):
+    def test_write_query_can_prepare_copy_while_read_only_query_is_active(self):
         reader_started = Event()
         release_reader = Event()
         writer_started = Event()
@@ -161,7 +178,7 @@ class DBMSTest(unittest.TestCase):
         self.assertTrue(reader_started.wait(timeout=1))
         writer.start()
 
-        self.assertFalse(writer_started.wait(timeout=0.1))
+        self.assertTrue(writer_started.wait(timeout=1))
         release_reader.set()
         reader.join(timeout=1)
         writer.join(timeout=1)
@@ -170,7 +187,7 @@ class DBMSTest(unittest.TestCase):
         self.assertFalse(writer.is_alive())
         self.assertTrue(writer_started.is_set())
 
-    def test_waiting_writer_blocks_new_read_only_queries(self):
+    def test_active_writer_does_not_block_new_read_only_queries(self):
         first_reader_started = Event()
         release_first_reader = Event()
         writer_started = Event()
@@ -215,11 +232,9 @@ class DBMSTest(unittest.TestCase):
         writer.start()
         second_reader.start()
 
-        self.assertFalse(writer_started.wait(timeout=0.1))
-        self.assertFalse(second_reader_started.wait(timeout=0.1))
-        release_first_reader.set()
         self.assertTrue(writer_started.wait(timeout=1))
-        self.assertFalse(second_reader_started.wait(timeout=0.1))
+        self.assertTrue(second_reader_started.wait(timeout=1))
+        release_first_reader.set()
         release_writer.set()
 
         first_reader.join(timeout=1)
@@ -269,7 +284,7 @@ class DBMSTest(unittest.TestCase):
         self.assertFalse(second.is_alive())
         self.assertTrue(second_started.is_set())
 
-    def test_save_is_part_of_serialized_execution(self):
+    def test_reader_sees_previous_snapshot_while_writer_is_saving(self):
         save_started = Event()
         release_save = Event()
         second_started = Event()
@@ -277,9 +292,14 @@ class DBMSTest(unittest.TestCase):
         second_query = Mock()
         first_query.access_mode = QueryAccessMode.WRITE
         second_query.access_mode = QueryAccessMode.READ
-        first_query.run.return_value = QueryResult(success=True, data_changed=True)
+        def run_first(data):
+            data.tables["uncommitted"] = Mock()
+            return QueryResult(success=True, data_changed=True)
+
+        first_query.run.side_effect = run_first
 
         def run_second(data):
+            self.assertNotIn("uncommitted", data.tables)
             second_started.set()
             return QueryResult(success=True)
 
@@ -297,7 +317,7 @@ class DBMSTest(unittest.TestCase):
         self.assertTrue(save_started.wait(timeout=1))
         second.start()
 
-        self.assertFalse(second_started.wait(timeout=0.1))
+        self.assertTrue(second_started.wait(timeout=1))
         release_save.set()
         first.join(timeout=1)
         second.join(timeout=1)
