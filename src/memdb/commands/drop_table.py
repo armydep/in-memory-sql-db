@@ -1,9 +1,11 @@
-from memdb.commands.base import QueryInterface
+from memdb.commands.base import QueryAccessMode, QueryInterface
 from memdb.data.db_data import DBData
 from memdb.commands.query_result import QueryResult
 
 
 class DropTableQuery(QueryInterface):
+    access_mode = QueryAccessMode.WRITE
+
     def __init__(self, table_name: str):
         self.table_name = table_name
 

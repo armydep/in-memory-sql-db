@@ -1,6 +1,6 @@
 from typing import Any
 
-from memdb.commands.base import QueryInterface
+from memdb.commands.base import QueryAccessMode, QueryInterface
 from memdb.data.cell import Cell
 from memdb.data.cell_data import BlobData, BooleanData, IntegerData, StrData
 from memdb.data.db_data import DBData
@@ -9,6 +9,8 @@ from memdb.commands.query_result import QueryResult
 
 
 class InsertQuery(QueryInterface):
+    access_mode = QueryAccessMode.WRITE
+
     def __init__(self, table_name: str, values: dict[str, Any]):
         self.table_name = table_name
         self.values = values

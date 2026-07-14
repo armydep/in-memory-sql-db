@@ -37,7 +37,7 @@ class QueryRequestHandler(socketserver.StreamRequestHandler):
 
             try:
                 command = line.rstrip(b"\r\n").decode("utf-8")
-                result = self.server.dbms.execute(command)
+                result = self.server.dbms.execute(command, session_id=session_id)
             except UnicodeDecodeError:
                 result = QueryResult(success=False, message="request must be valid UTF-8")
             except ValueError as error:

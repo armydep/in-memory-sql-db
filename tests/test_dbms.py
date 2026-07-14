@@ -4,6 +4,7 @@ from threading import Event, Thread
 from tempfile import TemporaryDirectory
 from unittest.mock import Mock
 
+from memdb.commands.base import QueryAccessMode
 from memdb.commands.query_factory import QueryFactory
 from memdb.commands.query_result import QueryResult
 from memdb.data.db_data import DBData
@@ -18,6 +19,7 @@ class DBMSTest(unittest.TestCase):
         self.storage = Mock(spec=DBStorage)
         self.storage.load.return_value = self.data
         self.query = Mock()
+        self.query.access_mode = QueryAccessMode.WRITE
         self.query_factory = Mock()
         self.query_factory.create.return_value = self.query
         self.dbms = DBMS(self.storage, self.query_factory)
@@ -34,6 +36,7 @@ class DBMSTest(unittest.TestCase):
         self.storage.save.assert_called_once_with(self.data)
 
     def test_does_not_save_after_read_only_query(self):
+        self.query.access_mode = QueryAccessMode.READ
         self.query.run.return_value = QueryResult(
             success=True,
             data_changed=False,
@@ -53,13 +56,190 @@ class DBMSTest(unittest.TestCase):
 
         self.storage.save.assert_not_called()
 
-    def test_serializes_query_execution(self):
+    def test_read_only_queries_can_overlap(self):
         first_started = Event()
         release_first = Event()
         second_started = Event()
 
         first_query = Mock()
+        first_query.access_mode = QueryAccessMode.READ
         second_query = Mock()
+        second_query.access_mode = QueryAccessMode.READ
+
+        def run_first(data):
+            first_started.set()
+            self.assertTrue(release_first.wait(timeout=1))
+            return QueryResult(success=True)
+
+        def run_second(data):
+            second_started.set()
+            return QueryResult(success=True)
+
+        first_query.run.side_effect = run_first
+        second_query.run.side_effect = run_second
+        self.query_factory.create.side_effect = [first_query, second_query]
+
+        first = Thread(target=self.dbms.execute, args=("first",))
+        second = Thread(target=self.dbms.execute, args=("second",))
+        first.start()
+        self.assertTrue(first_started.wait(timeout=1))
+        second.start()
+
+        self.assertTrue(second_started.wait(timeout=1))
+        release_first.set()
+        first.join(timeout=1)
+        second.join(timeout=1)
+
+        self.assertFalse(first.is_alive())
+        self.assertFalse(second.is_alive())
+        self.assertTrue(second_started.is_set())
+
+    def test_write_query_blocks_read_only_query(self):
+        writer_started = Event()
+        release_writer = Event()
+        reader_started = Event()
+
+        writer_query = Mock()
+        writer_query.access_mode = QueryAccessMode.WRITE
+        reader_query = Mock()
+        reader_query.access_mode = QueryAccessMode.READ
+
+        def run_writer(data):
+            writer_started.set()
+            self.assertTrue(release_writer.wait(timeout=1))
+            return QueryResult(success=True)
+
+        def run_reader(data):
+            reader_started.set()
+            return QueryResult(success=True)
+
+        writer_query.run.side_effect = run_writer
+        reader_query.run.side_effect = run_reader
+        self.query_factory.create.side_effect = [writer_query, reader_query]
+
+        writer = Thread(target=self.dbms.execute, args=("writer",))
+        reader = Thread(target=self.dbms.execute, args=("reader",))
+        writer.start()
+        self.assertTrue(writer_started.wait(timeout=1))
+        reader.start()
+
+        self.assertFalse(reader_started.wait(timeout=0.1))
+        release_writer.set()
+        writer.join(timeout=1)
+        reader.join(timeout=1)
+
+        self.assertFalse(writer.is_alive())
+        self.assertFalse(reader.is_alive())
+        self.assertTrue(reader_started.is_set())
+
+    def test_read_only_query_blocks_write_query(self):
+        reader_started = Event()
+        release_reader = Event()
+        writer_started = Event()
+
+        reader_query = Mock()
+        reader_query.access_mode = QueryAccessMode.READ
+        writer_query = Mock()
+        writer_query.access_mode = QueryAccessMode.WRITE
+
+        def run_reader(data):
+            reader_started.set()
+            self.assertTrue(release_reader.wait(timeout=1))
+            return QueryResult(success=True)
+
+        def run_writer(data):
+            writer_started.set()
+            return QueryResult(success=True)
+
+        reader_query.run.side_effect = run_reader
+        writer_query.run.side_effect = run_writer
+        self.query_factory.create.side_effect = [reader_query, writer_query]
+
+        reader = Thread(target=self.dbms.execute, args=("reader",))
+        writer = Thread(target=self.dbms.execute, args=("writer",))
+        reader.start()
+        self.assertTrue(reader_started.wait(timeout=1))
+        writer.start()
+
+        self.assertFalse(writer_started.wait(timeout=0.1))
+        release_reader.set()
+        reader.join(timeout=1)
+        writer.join(timeout=1)
+
+        self.assertFalse(reader.is_alive())
+        self.assertFalse(writer.is_alive())
+        self.assertTrue(writer_started.is_set())
+
+    def test_waiting_writer_blocks_new_read_only_queries(self):
+        first_reader_started = Event()
+        release_first_reader = Event()
+        writer_started = Event()
+        release_writer = Event()
+        second_reader_started = Event()
+
+        first_reader_query = Mock()
+        first_reader_query.access_mode = QueryAccessMode.READ
+        writer_query = Mock()
+        writer_query.access_mode = QueryAccessMode.WRITE
+        second_reader_query = Mock()
+        second_reader_query.access_mode = QueryAccessMode.READ
+
+        def run_first_reader(data):
+            first_reader_started.set()
+            self.assertTrue(release_first_reader.wait(timeout=1))
+            return QueryResult(success=True)
+
+        def run_writer(data):
+            writer_started.set()
+            self.assertTrue(release_writer.wait(timeout=1))
+            return QueryResult(success=True)
+
+        def run_second_reader(data):
+            second_reader_started.set()
+            return QueryResult(success=True)
+
+        first_reader_query.run.side_effect = run_first_reader
+        writer_query.run.side_effect = run_writer
+        second_reader_query.run.side_effect = run_second_reader
+        self.query_factory.create.side_effect = [
+            first_reader_query,
+            writer_query,
+            second_reader_query,
+        ]
+
+        first_reader = Thread(target=self.dbms.execute, args=("first reader",))
+        writer = Thread(target=self.dbms.execute, args=("writer",))
+        second_reader = Thread(target=self.dbms.execute, args=("second reader",))
+        first_reader.start()
+        self.assertTrue(first_reader_started.wait(timeout=1))
+        writer.start()
+        second_reader.start()
+
+        self.assertFalse(writer_started.wait(timeout=0.1))
+        self.assertFalse(second_reader_started.wait(timeout=0.1))
+        release_first_reader.set()
+        self.assertTrue(writer_started.wait(timeout=1))
+        self.assertFalse(second_reader_started.wait(timeout=0.1))
+        release_writer.set()
+
+        first_reader.join(timeout=1)
+        writer.join(timeout=1)
+        second_reader.join(timeout=1)
+
+        self.assertFalse(first_reader.is_alive())
+        self.assertFalse(writer.is_alive())
+        self.assertFalse(second_reader.is_alive())
+        self.assertTrue(second_reader_started.is_set())
+
+    def test_write_queries_block_each_other(self):
+        first_started = Event()
+        release_first = Event()
+        second_started = Event()
+
+        first_query = Mock()
+        first_query.access_mode = QueryAccessMode.WRITE
+        second_query = Mock()
+        second_query.access_mode = QueryAccessMode.WRITE
 
         def run_first(data):
             first_started.set()
@@ -95,6 +275,8 @@ class DBMSTest(unittest.TestCase):
         second_started = Event()
         first_query = Mock()
         second_query = Mock()
+        first_query.access_mode = QueryAccessMode.WRITE
+        second_query.access_mode = QueryAccessMode.READ
         first_query.run.return_value = QueryResult(success=True, data_changed=True)
 
         def run_second(data):
