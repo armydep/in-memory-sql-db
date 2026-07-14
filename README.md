@@ -128,27 +128,39 @@ docker compose down --volumes
 
 ## Roadmap / TODO
 
-1. **Persistent storage** — implement additional `DBStorage` backends and
-   evaluate cloud deployment options such as object storage and persistent
-   volumes. Define a versioned on-disk format, atomic writes, backups, and
-   recovery behavior.
-2. **Multi-user support** — add a server-facing session model and a locking
-   mechanism for safe concurrent access. Start with database- or table-level
-   locks, then consider row-level locks and deadlock handling as needed.
-3. **Complete core SQL operations** — implement execution for `UPDATE` and
+1. **Table-level locking** — upgrade the database-wide `RWLock` to per-table
+   granularity so writes to different tables can proceed concurrently. Keep a
+   whole-database lock (or equivalent) for statements that touch the table
+   registry itself (`CREATE TABLE`, `DROP TABLE`).
+2. **Transactions** — support `BEGIN`, `COMMIT`, and `ROLLBACK`, with clearly
+   defined isolation and failure semantics. Design together with the lock
+   granularity above so transaction scope and lock scope stay coherent.
+3. **Upgrade the persistence storage engine** — move from one whole-database
+   JSON snapshot to a separate file per table (a prerequisite once table-level
+   locking lands, so each table's file can be written independently). Fix the
+   copy-on-write gap this exposes: `JsonFileStorage.save()` currently walks the
+   live `DBData` in place, which is safe today only because a single global
+   write lock covers the whole snapshot. Update the `DBStorage` save/load
+   contract for per-table granularity, and add BLOB support to the on-disk
+   format. Still open beyond this: an object-storage-backed `DBStorage`
+   (S3/GCS) for cloud deployment, and backup/recovery tooling beyond today's
+   fail-loudly-on-corrupt-snapshot policy.
+4. **Multi-user support** — session model and database-wide locking are done
+   (thread-per-connection TCP server; writer-preference `RWLock` covering
+   query execution and persistence together). Remaining: row-level locking and
+   deadlock handling, once table-level locking (above) is in place.
+5. **Complete core SQL operations** — implement execution for `UPDATE` and
    `DELETE`, followed by column projections, richer `WHERE` expressions,
    ordering, limits, and joins.
-4. **Transactions** — support `BEGIN`, `COMMIT`, and `ROLLBACK`, with clearly
-   defined isolation and failure semantics.
-5. **Schema constraints** — add primary keys, uniqueness, nullability, default
+6. **Schema constraints** — add primary keys, uniqueness, nullability, default
    values, and foreign keys with consistent validation and error messages.
-6. **Indexes and query planning** — introduce indexes for common lookup paths,
+7. **Indexes and query planning** — introduce indexes for common lookup paths,
    then add a simple query plan representation and performance benchmarks.
-7. **Network API and security** — expose the database through a protocol or
+8. **Network API and security** — expose the database through a protocol or
    service API, with authentication, authorization, encrypted connections,
    resource limits, and query timeouts.
-8. **Operational tooling** — add structured logging, metrics, health checks,
+9. **Operational tooling** — add structured logging, metrics, health checks,
    import/export commands, and tools for inspecting active sessions and locks.
-9. **CLI improvements** — add command history, multiline statements,
-   semicolon-delimited input, configurable output formats, and helpful
-   commands such as `.help`, `.tables`, and `.quit`.
+10. **CLI improvements** — add command history, multiline statements,
+    semicolon-delimited input, configurable output formats, and helpful
+    commands such as `.help`, `.tables`, and `.quit`.
