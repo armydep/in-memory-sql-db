@@ -3,6 +3,10 @@ import shlex
 from typing import Any
 
 from memdb.commands.base import QueryInterface
+from memdb.commands.comparison_condition import (
+    ComparisonCondition,
+    ComparisonOperator,
+)
 from memdb.commands.create_table import CreateTableQuery
 from memdb.commands.delete import DeleteQuery
 from memdb.commands.describe_db import DescribeDBQuery
@@ -24,7 +28,13 @@ _DESCRIBE_TABLE_RE = re.compile(
     re.IGNORECASE,
 )
 _DROP_TABLE_RE = re.compile(r"^drop\s+table\s+(?P<table>\w+)$", re.IGNORECASE)
-_SELECT_RE = re.compile(r"^select\s+\*\s+from\s+(?P<table>\w+)$", re.IGNORECASE)
+_SELECT_RE = re.compile(
+    r"^select\s+\*\s+from\s+(?P<table>\w+)"
+    r"(?:\s+where\s+(?:(?P<condition_table>\w+)\.)?"
+    r"(?P<column>\w+)\s*(?P<operator>==(?!=)|!=(?!=)|>(?!=))"
+    r"\s*(?P<value>.+))?$",
+    re.IGNORECASE,
+)
 _INSERT_RE = re.compile(
     r"^insert\s*\((?P<rows>.*?)\)\s+into\s+(?P<table>\w+)\s*\((?P<values>.*?)\)$",
     re.IGNORECASE | re.DOTALL,
@@ -72,7 +82,15 @@ class QueryParser:
             return DropTableQuery(match.group("table"))
 
         if match := _SELECT_RE.fullmatch(query):
-            return SelectQuery(match.group("table"))
+            condition = None
+            if column_name := match.group("column"):
+                condition = ComparisonCondition(
+                    table_name=match.group("condition_table"),
+                    column_name=column_name,
+                    operator=ComparisonOperator(match.group("operator")),
+                    value=self._parse_value(match.group("value")),
+                )
+            return SelectQuery(match.group("table"), condition)
 
         if match := _INSERT_RE.fullmatch(query):
             rows_str = match.group("rows").strip()
