@@ -10,6 +10,7 @@ from memdb.commands.describe_db import DescribeDBQuery
 from memdb.commands.describe_table import DescribeTableQuery
 from memdb.commands.drop_table import DropTableQuery
 from memdb.commands.insert import InsertQuery
+from memdb.commands.index_definition import IndexDefinition
 from memdb.commands.select import SelectQuery
 from memdb.commands.update import UpdateQuery
 from memdb.data.column import Column
@@ -41,6 +42,42 @@ class QueryParserParseTest(unittest.TestCase):
             query.columns,
             [Column("id", IntType()), Column("name", StrType())],
         )
+        self.assertEqual(query.indexes, [])
+
+    def test_create_table_parses_single_column_index(self):
+        query = self.parser.parse(
+            "create table users { id INT, email STR, index (email) }"
+        )
+
+        self.assertEqual(
+            query.columns,
+            [Column("id", IntType()), Column("email", StrType())],
+        )
+        self.assertEqual(query.indexes, [IndexDefinition("email")])
+
+    def test_create_table_parses_multiple_indexes(self):
+        query = self.parser.parse(
+            "create table users { index(id), id INT, email STR, INDEX ( email ) }"
+        )
+
+        self.assertEqual(
+            query.indexes,
+            [IndexDefinition("id"), IndexDefinition("email")],
+        )
+
+    def test_create_table_rejects_index_for_undefined_column(self):
+        with self.assertRaisesRegex(ValueError, "undefined column: email"):
+            self.parser.parse("create table users { id INT, index (email) }")
+
+    def test_create_table_rejects_duplicate_index(self):
+        with self.assertRaisesRegex(ValueError, "Duplicate index"):
+            self.parser.parse(
+                "create table users { id INT, index (id), index (id) }"
+            )
+
+    def test_create_table_rejects_malformed_index(self):
+        with self.assertRaisesRegex(ValueError, "Invalid index definition"):
+            self.parser.parse("create table users { id INT, index id }")
 
     def test_parse_is_case_insensitive(self):
         query = self.parser.parse("CREATE TABLE users { id int, name str }")

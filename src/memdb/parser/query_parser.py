@@ -13,6 +13,7 @@ from memdb.commands.describe_db import DescribeDBQuery
 from memdb.commands.describe_table import DescribeTableQuery
 from memdb.commands.drop_table import DropTableQuery
 from memdb.commands.insert import InsertQuery
+from memdb.commands.index_definition import IndexDefinition
 from memdb.commands.select import SelectQuery
 from memdb.commands.update import UpdateQuery
 from memdb.data.column import Column
@@ -22,6 +23,10 @@ from memdb.data.types.datatype import BoolType, Datatype, IntType, StrType
 _CREATE_TABLE_RE = re.compile(
     r"^create\s+table\s+(?P<table>\w+)\s*\{\s*(?P<columns>.*?)\s*\}$",
     re.IGNORECASE | re.DOTALL,
+)
+_INDEX_DEFINITION_RE = re.compile(
+    r"^index\s*\(\s*(?P<column>\w+)\s*\)$",
+    re.IGNORECASE,
 )
 _DESCRIBE_TABLE_RE = re.compile(
     r"^describe\s+table\s+(?P<table>\w+)$",
@@ -73,9 +78,11 @@ class QueryParser:
             return DescribeTableQuery(match.group("table"))
 
         if match := _CREATE_TABLE_RE.fullmatch(query):
+            columns, indexes = self._parse_table_elements(match.group("columns"))
             return CreateTableQuery(
                 match.group("table"),
-                self._parse_columns(match.group("columns")),
+                columns,
+                indexes,
             )
 
         if match := _DROP_TABLE_RE.fullmatch(query):
@@ -143,6 +150,39 @@ class QueryParser:
             columns.append(Column(column_name, datatype))
 
         return columns
+
+    def _parse_table_elements(
+        self, elements_str: str
+    ) -> tuple[list[Column], list[IndexDefinition]]:
+        if not elements_str.strip():
+            return [], []
+
+        columns = []
+        indexes = []
+        for element in elements_str.split(","):
+            declaration = element.strip()
+            if not declaration:
+                raise ValueError("Invalid empty table definition")
+            if re.match(r"^index\b", declaration, re.IGNORECASE):
+                match = _INDEX_DEFINITION_RE.fullmatch(declaration)
+                if match is None:
+                    raise ValueError(f"Invalid index definition: {declaration}")
+                indexes.append(IndexDefinition(match.group("column")))
+            else:
+                columns.extend(self._parse_columns(declaration))
+
+        column_names = {column.name for column in columns}
+        for index in indexes:
+            if index.column_name not in column_names:
+                raise ValueError(
+                    f"Index references undefined column: {index.column_name}"
+                )
+
+        indexed_columns = [index.column_name for index in indexes]
+        if len(indexed_columns) != len(set(indexed_columns)):
+            raise ValueError("Duplicate index definition")
+
+        return columns, indexes
 
     def _parse_datatype(self, datatype_name: str) -> Datatype:
         if datatype_name.upper() == "BLOB":

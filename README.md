@@ -63,6 +63,16 @@ memdb demo
 python -m memdb demo
 ```
 
+`CREATE TABLE` accepts parser-level declarations for single-column indexes:
+
+```text
+create table users {id int, email str, index (id), index (email)};
+```
+
+The parser records these declarations on `CreateTableQuery.indexes` and
+validates that every indexed column exists and is declared only once. This
+phase does not yet build, persist, or use indexes during query execution.
+
 ## Storage configuration
 
 ```bash

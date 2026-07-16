@@ -1,6 +1,7 @@
 import unittest
 
 from memdb.commands.create_table import CreateTableQuery
+from memdb.commands.index_definition import IndexDefinition
 from memdb.data.column import Column
 from memdb.data.db_data import DBData
 from memdb.data.types.datatype import IntType
@@ -20,6 +21,19 @@ class CreateTableQueryRunTest(unittest.TestCase):
         self.assertIn("users", data.tables)
         self.assertEqual(data.tables["users"].name, "users")
         self.assertEqual(data.tables["users"].columns, columns)
+
+    def test_run_accepts_parsed_index_state_without_creating_index(self):
+        data = DBData()
+        columns = [Column("id", IntType())]
+        query = CreateTableQuery(
+            "users", columns, indexes=[IndexDefinition("id")]
+        )
+
+        result = query.run(data)
+
+        self.assertTrue(result.success)
+        self.assertEqual(query.indexes, [IndexDefinition("id")])
+        self.assertFalse(hasattr(data.tables["users"], "indexes"))
 
     def test_run_returns_failure_when_table_already_exists(self):
         data = DBData()
