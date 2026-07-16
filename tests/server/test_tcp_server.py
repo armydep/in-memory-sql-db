@@ -48,11 +48,16 @@ class DBMSServerTest(unittest.TestCase):
             second, b'insert (id, name) into users (1, "alice");'
         )
         selected = self._send_command(first, b"select * from users;")
+        filtered = self._send_command(
+            second, b"select * from users where users.id > 0;"
+        )
 
         self.assertTrue(created.success)
         self.assertTrue(inserted.success)
         self.assertEqual(selected.columns, ["id", "name"])
         self.assertEqual(selected.rows, [[1, "alice"]])
+        self.assertTrue(filtered.success)
+        self.assertEqual(filtered.rows, [[1, "alice"]])
 
     def test_invalid_query_does_not_close_session(self):
         connection = self._connect()

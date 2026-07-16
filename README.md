@@ -118,6 +118,19 @@ The following query should return the previously inserted row:
 select * from users
 ```
 
+`SELECT` also supports one optional basic `WHERE` comparison:
+
+```text
+select * from users where id == 1
+select * from users where users.name != "bob"
+select * from users where users.id > 0
+```
+
+Both unqualified (`id`) and table-qualified (`users.id`) column names are
+accepted. `==` and `!=` support `INT`, `STR`, and `BOOL`; `>` currently
+supports `INT` only. Compound conditions (`AND`, `OR`, and parentheses) are
+not supported yet.
+
 The `memdb-data` named volume stores `/data/memdb.json` independently of the
 container lifecycle. Only `memdb-server` should use that snapshot while the
 server is running. The published port is restricted to host loopback by
@@ -151,7 +164,7 @@ docker compose down --volumes
    query execution and persistence together). Remaining: row-level locking and
    deadlock handling, once table-level locking (above) is in place.
 5. **Complete core SQL operations** — implement execution for `UPDATE` and
-   `DELETE`, followed by column projections, richer `WHERE` expressions,
+   `DELETE`, followed by column projections, compound `WHERE` expressions,
    ordering, limits, and joins.
 6. **Schema constraints** — add primary keys, uniqueness, nullability, default
    values, and foreign keys with consistent validation and error messages.

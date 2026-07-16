@@ -1,6 +1,10 @@
 import unittest
 
 from memdb.commands.create_table import CreateTableQuery
+from memdb.commands.comparison_condition import (
+    ComparisonCondition,
+    ComparisonOperator,
+)
 from memdb.commands.delete import DeleteQuery
 from memdb.commands.describe_db import DescribeDBQuery
 from memdb.commands.describe_table import DescribeTableQuery
@@ -59,6 +63,48 @@ class QueryParserParseTest(unittest.TestCase):
 
         self.assertIsInstance(query, SelectQuery)
         self.assertEqual(query.table_name, "users")
+        self.assertIsNone(query.condition)
+
+    def test_select_parses_unqualified_where_condition(self):
+        query = self.parser.parse("select * from users where id == 5")
+
+        self.assertEqual(
+            query.condition,
+            ComparisonCondition(
+                column_name="id",
+                operator=ComparisonOperator.EQUAL,
+                value=5,
+            ),
+        )
+
+    def test_select_parses_qualified_where_condition(self):
+        query = self.parser.parse(
+            'select * from users where users.name != "alice"'
+        )
+
+        self.assertEqual(
+            query.condition,
+            ComparisonCondition(
+                table_name="users",
+                column_name="name",
+                operator=ComparisonOperator.NOT_EQUAL,
+                value="alice",
+            ),
+        )
+
+    def test_select_parses_greater_than_condition(self):
+        query = self.parser.parse("select * from users where id > 10")
+
+        self.assertEqual(query.condition.operator, ComparisonOperator.GREATER_THAN)
+        self.assertEqual(query.condition.value, 10)
+
+    def test_select_rejects_unsupported_where_operator(self):
+        with self.assertRaisesRegex(ValueError, "Unsupported query"):
+            self.parser.parse("select * from users where id >= 5")
+
+    def test_select_rejects_incomplete_where_condition(self):
+        with self.assertRaisesRegex(ValueError, "Unsupported query"):
+            self.parser.parse("select * from users where id ==")
 
     def test_insert_returns_insert_query(self):
         query = self.parser.parse('insert (id, name) into users (1, "alice")')
