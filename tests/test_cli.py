@@ -45,9 +45,9 @@ class RunReplTest(unittest.TestCase):
 
     def test_executes_queries_in_the_same_database_until_exit(self):
         queries = iter([
-            "create table users {id int, name str}",
-            'insert (id, name) into users (1, "alice")',
-            "select * from users",
+            "create table users {id int, name str};",
+            'insert (id, name) into users (1, "alice");',
+            "select * from users;",
             "exit",
         ])
         lines = []
@@ -59,13 +59,28 @@ class RunReplTest(unittest.TestCase):
         self.assertEqual(len(self.dbms.data.tables["users"].rows), 1)
 
     def test_reports_invalid_query_and_continues(self):
-        queries = iter(["not sql", "describe db", "quit"])
+        queries = iter(["not sql;", "describe db;", "quit"])
         lines = []
 
         run_repl(self.dbms, lambda _prompt: next(queries), lines.append)
 
         self.assertIn("Error: Unsupported query: not sql", lines)
         self.assertIn("Tables", lines)
+
+    def test_accumulates_input_until_semicolon(self):
+        queries = iter([
+            "create table users {",
+            "id int, name str",
+            "};",
+            "describe table users;",
+            "exit",
+        ])
+        lines = []
+
+        run_repl(self.dbms, lambda _prompt: next(queries), lines.append)
+
+        self.assertIn("table users created", lines)
+        self.assertIn("id     | INT ", lines)
 
     def test_eof_exits_cleanly(self):
         lines = []

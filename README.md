@@ -52,7 +52,7 @@ memdb
 python -m memdb
 ```
 
-Enter one query per line. Use `exit`, `quit`, Ctrl-D, or Ctrl-C to leave the
+End each query with `;`. Use `exit`, `quit`, Ctrl-D, or Ctrl-C to leave the
 prompt. The in-memory database is retained until the CLI exits.
 
 The original built-in command sequence remains available as a demo:
@@ -87,7 +87,8 @@ python -m memdb.client
 
 The server owns one shared `DBMS`. Each client connection runs in its own
 thread, while a database-wide lock serializes query execution and persistence.
-Requests are UTF-8 SQL lines and responses are JSON-encoded query results.
+Requests are UTF-8 SQL commands terminated by `;`, and responses are
+JSON-encoded query results.
 
 ## Docker
 
@@ -100,8 +101,8 @@ docker compose up --build memdb-server
 Connect from another terminal with `python -m memdb.client`. Create data:
 
 ```text
-create table users {id int, name str}
-insert (id, name) into users (1, "alice")
+create table users {id int, name str};
+insert (id, name) into users (1, "alice");
 ```
 
 Stop and recreate the container, then reconnect:
@@ -161,6 +162,5 @@ docker compose down --volumes
    resource limits, and query timeouts.
 9. **Operational tooling** — add structured logging, metrics, health checks,
    import/export commands, and tools for inspecting active sessions and locks.
-10. **CLI improvements** — add command history, multiline statements,
-    semicolon-delimited input, configurable output formats, and helpful
-    commands such as `.help`, `.tables`, and `.quit`.
+10. **CLI improvements** — add command history, configurable output formats,
+    and helpful commands such as `.help`, `.tables`, and `.quit`.

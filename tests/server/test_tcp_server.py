@@ -5,7 +5,7 @@ import unittest
 from memdb.commands.query_factory import QueryFactory
 from memdb.dbms import DBMS
 from memdb.protocol import decode_result
-from memdb.server.tcp_server import DBMSServer, MAX_LINE_BYTES
+from memdb.server.tcp_server import DBMSServer, MAX_COMMAND_BYTES
 from memdb.storage.in_memory_storage import InMemoryStorage
 
 
@@ -31,8 +31,8 @@ class DBMSServerTest(unittest.TestCase):
         return connection
 
     @staticmethod
-    def _send_line(connection: socket.socket, line: bytes):
-        connection.sendall(line)
+    def _send_command(connection: socket.socket, command: bytes):
+        connection.sendall(command)
         reader = connection.makefile("rb")
         try:
             return decode_result(reader.readline())
@@ -43,11 +43,11 @@ class DBMSServerTest(unittest.TestCase):
         first = self._connect()
         second = self._connect()
 
-        created = self._send_line(first, b"create table users {id int, name str}\n")
-        inserted = self._send_line(
-            second, b'insert (id, name) into users (1, "alice")\n'
+        created = self._send_command(first, b"create table users {id int, name str};")
+        inserted = self._send_command(
+            second, b'insert (id, name) into users (1, "alice");'
         )
-        selected = self._send_line(first, b"select * from users\n")
+        selected = self._send_command(first, b"select * from users;")
 
         self.assertTrue(created.success)
         self.assertTrue(inserted.success)
@@ -59,13 +59,29 @@ class DBMSServerTest(unittest.TestCase):
         reader = connection.makefile("rb")
         self.addCleanup(reader.close)
 
-        connection.sendall(b"not sql\n")
+        connection.sendall(b"not sql;")
         self.assertFalse(decode_result(reader.readline()).success)
-        connection.sendall(b"describe db\n")
+        connection.sendall(b"describe db;")
         self.assertTrue(decode_result(reader.readline()).success)
 
+    def test_executes_multiple_commands_on_one_connection(self):
+        connection = self._connect()
+        reader = connection.makefile("rb")
+        self.addCleanup(reader.close)
+
+        connection.sendall(
+            b"create table users {id int, name str};"
+            b'insert (id, name) into users (1, "alice");'
+            b"select * from users;"
+        )
+
+        self.assertTrue(decode_result(reader.readline()).success)
+        self.assertTrue(decode_result(reader.readline()).success)
+        selected = decode_result(reader.readline())
+        self.assertEqual(selected.rows, [[1, "alice"]])
+
     def test_invalid_utf8_returns_failure(self):
-        result = self._send_line(self._connect(), b"\xff\n")
+        result = self._send_command(self._connect(), b"\xff;")
 
         self.assertFalse(result.success)
         self.assertIn("UTF-8", result.message)
@@ -74,14 +90,14 @@ class DBMSServerTest(unittest.TestCase):
         idle_connection = self._connect()
         active_connection = self._connect()
 
-        response = self._send_line(active_connection, b"describe db\n")
+        response = self._send_command(active_connection, b"describe db;")
 
         self.assertTrue(response.success)
         idle_connection.close()
 
-    def test_rejects_oversized_line(self):
-        result = self._send_line(
-            self._connect(), b"x" * (MAX_LINE_BYTES + 1) + b"\n"
+    def test_rejects_oversized_command(self):
+        result = self._send_command(
+            self._connect(), b"x" * (MAX_COMMAND_BYTES + 1) + b";"
         )
 
         self.assertFalse(result.success)

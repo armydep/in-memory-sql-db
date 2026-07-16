@@ -17,7 +17,7 @@ from memdb.data.types.datatype import BoolType, Datatype, IntType, StrType
 
 _CREATE_TABLE_RE = re.compile(
     r"^create\s+table\s+(?P<table>\w+)\s*\{\s*(?P<columns>.*?)\s*\}$",
-    re.IGNORECASE,
+    re.IGNORECASE | re.DOTALL,
 )
 _DESCRIBE_TABLE_RE = re.compile(
     r"^describe\s+table\s+(?P<table>\w+)$",
@@ -27,15 +27,15 @@ _DROP_TABLE_RE = re.compile(r"^drop\s+table\s+(?P<table>\w+)$", re.IGNORECASE)
 _SELECT_RE = re.compile(r"^select\s+\*\s+from\s+(?P<table>\w+)$", re.IGNORECASE)
 _INSERT_RE = re.compile(
     r"^insert\s*\((?P<rows>.*?)\)\s+into\s+(?P<table>\w+)\s*\((?P<values>.*?)\)$",
-    re.IGNORECASE,
+    re.IGNORECASE | re.DOTALL,
 )
 _DELETE_RE = re.compile(
     r"^delete\s+from\s+(?P<table>\w+)\s+where\s*\{\s*(?P<column>\w+)\s*=\s*(?P<value>.*?)\s*\}$",
-    re.IGNORECASE,
+    re.IGNORECASE | re.DOTALL,
 )
 _UPDATE_RE = re.compile(
     r"^update\s*\((?P<values>.*?)\)\s+in\s+(?P<table>\w+)\s+where\s*\{\s*(?P<column>\w+)\s*=\s*(?P<value>.*?)\s*\}$",
-    re.IGNORECASE,
+    re.IGNORECASE | re.DOTALL,
 )
 
 _DATA_TYPES: dict[str, type[Datatype]] = {

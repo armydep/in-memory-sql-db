@@ -6,6 +6,7 @@ from memdb import DBMS
 from memdb.commands.query_factory import QueryFactory
 from memdb.commands.query_result import QueryResult
 from memdb.config import load_config
+from memdb.query_input import is_exit_command, split_complete_queries
 from memdb.storage.factory import create_storage
 from memdb.setup_logging import log_storage_setup
 
@@ -50,26 +51,33 @@ def run_repl(
     output: Output = print,
 ) -> None:
     output("memdb CLI")
-    output("Enter a query, or type 'exit' to quit.")
+    output("Enter a query ending with ';', or type 'exit' to quit.")
+    buffer = ""
 
     while True:
         try:
-            query = input_fn("memdb> ").strip()
+            line = input_fn("...> " if buffer.strip() else "memdb> ")
         except (EOFError, KeyboardInterrupt):
             output("")
             return
 
-        if not query:
+        if not line.strip() and not buffer.strip():
             continue
-        if query.lower() in {"exit", "quit"}:
+        if is_exit_command(line) and not buffer.strip():
             return
 
-        try:
-            print_result(dbms.execute(query), output)
-        except ValueError as error:
-            output(f"Error: {error}")
-        except Exception as error:
-            output(f"Unexpected error: {error}")
+        buffer = f"{buffer}\n{line}" if buffer else line
+        queries, buffer = split_complete_queries(buffer)
+        for query in queries:
+            if is_exit_command(query):
+                return
+
+            try:
+                print_result(dbms.execute(query), output)
+            except ValueError as error:
+                output(f"Error: {error}")
+            except Exception as error:
+                output(f"Unexpected error: {error}")
 
 
 def main(config_path: Path | None = None) -> None:

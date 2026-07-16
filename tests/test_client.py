@@ -41,9 +41,9 @@ class LineClientTest(unittest.TestCase):
     def test_repl_executes_queries_and_formats_results(self):
         lines = []
         inputs = iter([
-            "create table users {id int, name str}",
-            'insert (id, name) into users (1, "alice")',
-            "select * from users",
+            "create table users {id int, name str};",
+            'insert (id, name) into users (1, "alice");',
+            "select * from users;",
             "exit",
         ])
 
@@ -55,7 +55,7 @@ class LineClientTest(unittest.TestCase):
 
     def test_repl_reports_lost_connection_and_returns(self):
         lines = []
-        inputs = iter(["describe db"])
+        inputs = iter(["describe db;"])
 
         with LineClient("127.0.0.1", self.port) as client:
             client._socket.shutdown(socket.SHUT_RDWR)
