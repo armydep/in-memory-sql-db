@@ -6,6 +6,7 @@ from typing import Any
 from memdb.cli import print_result
 from memdb.commands.query_result import QueryResult
 from memdb.protocol import decode_result
+from memdb.query_input import QUERY_DELIMITER, is_exit_command, split_complete_queries
 
 Input = Callable[[str], str]
 Output = Callable[[str], Any]
@@ -15,9 +16,9 @@ _DEFAULT_PORT = 7654
 
 
 class LineClient:
-    """TCP client for the newline-delimited memdb protocol.
+    """TCP client for the semicolon-delimited memdb protocol.
 
-    Sends one SQL command per line; the server returns one JSON-encoded
+    Sends one SQL command per semicolon; the server returns one JSON-encoded
     QueryResult line for each request.
     """
 
@@ -35,7 +36,10 @@ class LineClient:
         if self._socket is None or self._reader is None:
             raise RuntimeError("client is not connected")
 
-        self._socket.sendall(f"{command}\n".encode("utf-8"))
+        command = command.strip()
+        if command.endswith(QUERY_DELIMITER):
+            command = command[:-1].strip()
+        self._socket.sendall(f"{command}{QUERY_DELIMITER}".encode("utf-8"))
         response = self._reader.readline()
         if not response:
             raise ConnectionError("server closed the connection")
@@ -63,28 +67,35 @@ def run_repl(
     output: Output = print,
 ) -> None:
     output(f"connected to memdb server at {client.host}:{client.port}")
-    output("Enter a query, or type 'exit' to quit.")
+    output("Enter a query ending with ';', or type 'exit' to quit.")
+    buffer = ""
 
     while True:
         try:
-            line = input_fn("memdb> ").strip()
+            line = input_fn("...> " if buffer.strip() else "memdb> ")
         except (EOFError, KeyboardInterrupt):
             output("")
             return
 
-        if not line:
+        if not line.strip() and not buffer.strip():
             continue
-        if line.lower() in {"exit", "quit"}:
+        if is_exit_command(line) and not buffer.strip():
             return
 
-        try:
-            print_result(client.execute(line), output)
-        except (ConnectionError, OSError) as error:
-            output(f"connection lost: {error}")
-            return
-        except ValueError as error:
-            output(f"protocol error: {error}")
-            return
+        buffer = f"{buffer}\n{line}" if buffer else line
+        queries, buffer = split_complete_queries(buffer)
+        for query in queries:
+            if is_exit_command(query):
+                return
+
+            try:
+                print_result(client.execute(query), output)
+            except (ConnectionError, OSError) as error:
+                output(f"connection lost: {error}")
+                return
+            except ValueError as error:
+                output(f"protocol error: {error}")
+                return
 
 
 def main(argv: list[str] | None = None) -> None:
