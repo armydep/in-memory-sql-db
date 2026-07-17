@@ -8,9 +8,10 @@ class DescribeTableQuery(QueryInterface):
         self.table_name = table_name
 
     def run(self, data: DBData) -> QueryResult:
-        table = data.tables.get(self.table_name)
-        if table is None:
+        table_entry = data.tables.get(self.table_name)
+        if table_entry is None:
             return QueryResult(success=False, message=f"table {self.table_name} does not exist")
+        table = table_entry.table
 
         rows = [[column.name, column.datatype.name()] for column in table.columns]
         return QueryResult(

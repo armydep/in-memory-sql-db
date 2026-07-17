@@ -56,7 +56,7 @@ class RunReplTest(unittest.TestCase):
 
         self.assertIn("table users created", lines)
         self.assertIn("1  | alice", lines)
-        self.assertEqual(len(self.dbms.data.tables["users"].rows), 1)
+        self.assertEqual(len(self.dbms.data.tables["users"].table.rows), 1)
 
     def test_reports_invalid_query_and_continues(self):
         queries = iter(["not sql;", "describe db;", "quit"])

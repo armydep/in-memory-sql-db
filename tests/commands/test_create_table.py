@@ -19,10 +19,10 @@ class CreateTableQueryRunTest(unittest.TestCase):
         self.assertTrue(result.data_changed)
         self.assertEqual(result.message, "table users created")
         self.assertIn("users", data.tables)
-        self.assertEqual(data.tables["users"].name, "users")
-        self.assertEqual(data.tables["users"].columns, columns)
+        self.assertEqual(data.tables["users"].table.name, "users")
+        self.assertEqual(data.tables["users"].table.columns, columns)
 
-    def test_run_accepts_parsed_index_state_without_creating_index(self):
+    def test_run_creates_empty_index_from_parsed_state(self):
         data = DBData()
         columns = [Column("id", IntType())]
         query = CreateTableQuery(
@@ -33,7 +33,24 @@ class CreateTableQueryRunTest(unittest.TestCase):
 
         self.assertTrue(result.success)
         self.assertEqual(query.indexes, [IndexDefinition("id")])
-        self.assertFalse(hasattr(data.tables["users"], "indexes"))
+        index = data.tables["users"].indexes["id"]
+        self.assertEqual(index.column_name, "id")
+        self.assertEqual(index.column_position, 0)
+        self.assertEqual(index.entries, {})
+
+    def test_run_rejects_index_for_undefined_column(self):
+        data = DBData()
+        query = CreateTableQuery(
+            "users",
+            [Column("id", IntType())],
+            indexes=[IndexDefinition("missing")],
+        )
+
+        result = query.run(data)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.message, "index references undefined column: missing")
+        self.assertNotIn("users", data.tables)
 
     def test_run_returns_failure_when_table_already_exists(self):
         data = DBData()

@@ -63,15 +63,17 @@ memdb demo
 python -m memdb demo
 ```
 
-`CREATE TABLE` accepts parser-level declarations for single-column indexes:
+`CREATE TABLE` accepts non-unique, single-column hash indexes:
 
 ```text
 create table users {id int, email str, index (id), index (email)};
 ```
 
-The parser records these declarations on `CreateTableQuery.indexes` and
-validates that every indexed column exists and is declared only once. This
-phase does not yet build, persist, or use indexes during query execution.
+Every indexed value maps to references to matching rows, so duplicate values
+are supported without copying row data. Equality conditions (`==`) use an
+available index; `!=` and `>` continue to scan the table because hash indexes
+are unordered. Snapshots persist index definitions and rebuild index entries
+from base rows when loaded.
 
 ## Storage configuration
 
@@ -178,8 +180,9 @@ docker compose down --volumes
    ordering, limits, and joins.
 6. **Schema constraints** — add primary keys, uniqueness, nullability, default
    values, and foreign keys with consistent validation and error messages.
-7. **Indexes and query planning** — introduce indexes for common lookup paths,
-   then add a simple query plan representation and performance benchmarks.
+7. **Indexes and query planning** — extend the initial equality hash indexes
+   with ordered/range indexes, then add a simple query plan representation and
+   performance benchmarks.
 8. **Network API and security** — expose the database through a protocol or
    service API, with authentication, authorization, encrypted connections,
    resource limits, and query timeouts.

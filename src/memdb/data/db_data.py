@@ -1,6 +1,6 @@
-from memdb.data.table import Table
+from memdb.data.table_entry import TableEntry
 
 
 class DBData:
     def __init__(self):
-        self.tables: dict[str, Table] = {}
+        self.tables: dict[str, TableEntry] = {}
