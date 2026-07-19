@@ -102,6 +102,23 @@ thread, while a database-wide lock serializes query execution and persistence.
 Requests are UTF-8 SQL commands terminated by `;`, and responses are
 JSON-encoded query results.
 
+Run an end-to-end client/server index benchmark against an already-running
+server:
+
+```bash
+PYTHONPATH=src python3 scripts/benchmark_client.py --rows 10000
+```
+
+Run the same benchmark in process, using the demo-style DBMS path without TCP:
+
+```bash
+PYTHONPATH=src python3 scripts/benchmark_dbms.py --rows 10000
+```
+
+The benchmark loads indexed and non-indexed tables, reports insert throughput,
+and compares indexed equality lookup, non-indexed equality lookup, and full
+scan timings.
+
 ## Docker
 
 Build and start the persistent server:
