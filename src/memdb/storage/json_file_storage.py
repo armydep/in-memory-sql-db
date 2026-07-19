@@ -10,12 +10,15 @@ from memdb.data.cell_data import BlobData, BooleanData, IntegerData, StrData
 from memdb.data.cell_metadata import CellMetadata
 from memdb.data.column import Column
 from memdb.data.db_data import DBData
+from memdb.data.hash_index import HashIndex
 from memdb.data.row import Row
 from memdb.data.table import Table
+from memdb.data.table_entry import TableEntry
 from memdb.data.types.datatype import BlobType, BoolType, IntType, StrType
 from memdb.storage.db_storage import DBStorage
 
-_SNAPSHOT_VERSION = 1
+_SNAPSHOT_VERSION = 2
+_SUPPORTED_SNAPSHOT_VERSIONS = {1, _SNAPSHOT_VERSION}
 _DATATYPES = {
     "BLOB": BlobType,
     "BOOL": BoolType,
@@ -83,7 +86,8 @@ def _encode_snapshot(db_data: DBData) -> dict[str, Any]:
     metadata_tables = []
     data_tables = {}
 
-    for table_name, table in db_data.tables.items():
+    for table_name, table_entry in db_data.tables.items():
+        table = table_entry.table
         if table.name != table_name:
             raise ValueError(
                 f"table key {table_name!r} does not match table name {table.name!r}"
@@ -93,6 +97,10 @@ def _encode_snapshot(db_data: DBData) -> dict[str, Any]:
             {
                 "name": table.name,
                 "columns": [_encode_column(column) for column in table.columns],
+                "indexes": [
+                    {"column": index.column_name}
+                    for index in table_entry.indexes.values()
+                ],
             }
         )
         data_tables[table.name] = [
@@ -170,7 +178,7 @@ def _decode_snapshot(snapshot: Any) -> DBData:
     version = snapshot.get("version")
     if type(version) is not int:
         raise ValueError("snapshot version must be an integer")
-    if version != _SNAPSHOT_VERSION:
+    if version not in _SUPPORTED_SNAPSHOT_VERSIONS:
         raise ValueError(f"unsupported snapshot version {version}")
 
     metadata = _require_dict(snapshot.get("metadata"), "metadata")
@@ -197,6 +205,32 @@ def _decode_snapshot(snapshot: Any) -> DBData:
         if len(column_names) != len(set(column_names)):
             raise ValueError(f"duplicate column name in table {table_name!r}")
 
+        indexes = {}
+        if version >= 2:
+            index_values = _require_list(
+                table_metadata.get("indexes"), f"{location}.indexes"
+            )
+            for index_number, index_value in enumerate(index_values):
+                index_location = f"{location}.indexes[{index_number}]"
+                index_metadata = _require_dict(index_value, index_location)
+                index_column = _require_string(
+                    index_metadata.get("column"), f"{index_location}.column"
+                )
+                if set(index_metadata) != {"column"}:
+                    raise ValueError(f"invalid index definition at {index_location}")
+                if index_column not in column_names:
+                    raise ValueError(
+                        f"index references unknown column {index_column!r} "
+                        f"at {index_location}"
+                    )
+                if index_column in indexes:
+                    raise ValueError(
+                        f"duplicate index for column {index_column!r} at {location}"
+                    )
+                indexes[index_column] = HashIndex(
+                    index_column, column_names.index(index_column)
+                )
+
         if table_name not in data_tables:
             raise ValueError(f"data is missing for table {table_name!r}")
         row_values = _require_list(
@@ -211,7 +245,9 @@ def _decode_snapshot(snapshot: Any) -> DBData:
             )
             for row_index, row_value in enumerate(row_values)
         ]
-        db_data.tables[table_name] = table
+        table_entry = TableEntry(table, indexes)
+        table_entry.rebuild_indexes()
+        db_data.tables[table_name] = table_entry
 
     if set(data_tables) != set(db_data.tables):
         extra_tables = sorted(set(data_tables) - set(db_data.tables))

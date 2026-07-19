@@ -1,6 +1,7 @@
 import unittest
 
 from memdb.commands.create_table import CreateTableQuery
+from memdb.commands.index_definition import IndexDefinition
 from memdb.data.column import Column
 from memdb.data.db_data import DBData
 from memdb.data.types.datatype import IntType
@@ -18,8 +19,38 @@ class CreateTableQueryRunTest(unittest.TestCase):
         self.assertTrue(result.data_changed)
         self.assertEqual(result.message, "table users created")
         self.assertIn("users", data.tables)
-        self.assertEqual(data.tables["users"].name, "users")
-        self.assertEqual(data.tables["users"].columns, columns)
+        self.assertEqual(data.tables["users"].table.name, "users")
+        self.assertEqual(data.tables["users"].table.columns, columns)
+
+    def test_run_creates_empty_index_from_parsed_state(self):
+        data = DBData()
+        columns = [Column("id", IntType())]
+        query = CreateTableQuery(
+            "users", columns, indexes=[IndexDefinition("id")]
+        )
+
+        result = query.run(data)
+
+        self.assertTrue(result.success)
+        self.assertEqual(query.indexes, [IndexDefinition("id")])
+        index = data.tables["users"].indexes["id"]
+        self.assertEqual(index.column_name, "id")
+        self.assertEqual(index.column_position, 0)
+        self.assertEqual(index.entries, {})
+
+    def test_run_rejects_index_for_undefined_column(self):
+        data = DBData()
+        query = CreateTableQuery(
+            "users",
+            [Column("id", IntType())],
+            indexes=[IndexDefinition("missing")],
+        )
+
+        result = query.run(data)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.message, "index references undefined column: missing")
+        self.assertNotIn("users", data.tables)
 
     def test_run_returns_failure_when_table_already_exists(self):
         data = DBData()

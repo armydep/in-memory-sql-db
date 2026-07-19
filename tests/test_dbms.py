@@ -332,7 +332,9 @@ class DBMSTest(unittest.TestCase):
             first = DBMS(JsonFileStorage(path), QueryFactory())
             first.init()
             self.assertTrue(
-                first.execute("create table users {id int, name str}").success
+                first.execute(
+                    "create table users {id int, name str, index (name)}"
+                ).success
             )
             self.assertTrue(
                 first.execute(
@@ -342,10 +344,17 @@ class DBMSTest(unittest.TestCase):
 
             restarted = DBMS(JsonFileStorage(path), QueryFactory())
             restarted.init()
-            result = restarted.execute("select * from users")
+            result = restarted.execute(
+                'select * from users where name == "alice"'
+            )
 
             self.assertTrue(result.success)
             self.assertEqual(result.rows, [[1, "alice"]])
+            table_entry = restarted.data.tables["users"]
+            self.assertIs(
+                table_entry.indexes["name"].entries["alice"][0],
+                table_entry.table.rows[0],
+            )
 
 
 if __name__ == "__main__":

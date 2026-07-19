@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import Mock
 
 from memdb.commands.create_table import CreateTableQuery
 from memdb.commands.comparison_condition import (
@@ -6,6 +7,7 @@ from memdb.commands.comparison_condition import (
     ComparisonOperator,
 )
 from memdb.commands.insert import InsertQuery
+from memdb.commands.index_definition import IndexDefinition
 from memdb.commands.select import SelectQuery
 from memdb.data.column import Column
 from memdb.data.db_data import DBData
@@ -22,6 +24,7 @@ class SelectQueryRunTest(unittest.TestCase):
                 Column("name", StrType()),
                 Column("active", BoolType()),
             ],
+            indexes=[IndexDefinition("id"), IndexDefinition("name")],
         ).run(self.data)
 
     def test_run_returns_all_columns_and_rows_in_table_order(self):
@@ -56,11 +59,14 @@ class SelectQueryRunTest(unittest.TestCase):
         condition = ComparisonCondition(
             "name", ComparisonOperator.EQUAL, "alice"
         )
+        index = self.data.tables["users"].indexes["name"]
+        index.lookup = Mock(wraps=index.lookup)
 
         result = SelectQuery("users", condition).run(self.data)
 
         self.assertTrue(result.success)
         self.assertEqual(result.rows, [[1, "alice", True]])
+        index.lookup.assert_called_once_with("alice")
 
     def test_run_filters_rows_with_not_equal_condition(self):
         InsertQuery(
@@ -85,10 +91,13 @@ class SelectQueryRunTest(unittest.TestCase):
             "users", {"id": 2, "name": "bob", "active": False}
         ).run(self.data)
         condition = ComparisonCondition("id", ComparisonOperator.GREATER_THAN, 1)
+        index = self.data.tables["users"].indexes["id"]
+        index.lookup = Mock(wraps=index.lookup)
 
         result = SelectQuery("users", condition).run(self.data)
 
         self.assertEqual(result.rows, [[2, "bob", False]])
+        index.lookup.assert_not_called()
 
     def test_run_returns_no_rows_when_condition_does_not_match(self):
         condition = ComparisonCondition("id", ComparisonOperator.EQUAL, 99)

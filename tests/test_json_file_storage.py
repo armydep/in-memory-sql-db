@@ -9,8 +9,10 @@ from memdb.data.cell_data import BlobData, BooleanData, IntegerData, StrData
 from memdb.data.cell_metadata import CellMetadata
 from memdb.data.column import Column
 from memdb.data.db_data import DBData
+from memdb.data.hash_index import HashIndex
 from memdb.data.row import Row
 from memdb.data.table import Table
+from memdb.data.table_entry import TableEntry
 from memdb.data.types.datatype import BlobType, BoolType, IntType, StrType
 from memdb.storage.json_file_storage import JsonFileStorage
 
@@ -34,7 +36,8 @@ class JsonFileStorageTest(unittest.TestCase):
             loaded = storage.load()
 
             self.assertTrue(path.exists())
-            table = loaded.tables["records"]
+            table_entry = loaded.tables["records"]
+            table = table_entry.table
             self.assertEqual(table.name, "records")
             self.assertEqual(
                 [column.name for column in table.columns],
@@ -51,11 +54,58 @@ class JsonFileStorageTest(unittest.TestCase):
                 [cell.data.value() for cell in table.rows[0].cells],
                 [1, "alice", True, b"\x00\xff"],
             )
+            self.assertEqual(list(table_entry.indexes), ["name"])
+            self.assertIs(
+                table_entry.indexes["name"].entries["alice"][0],
+                table.rows[0],
+            )
 
             snapshot = json.loads(path.read_text(encoding="utf-8"))
-            self.assertEqual(snapshot["version"], 1)
+            self.assertEqual(snapshot["version"], 2)
+            self.assertEqual(
+                snapshot["metadata"]["tables"][0]["indexes"],
+                [{"column": "name"}],
+            )
             self.assertIn("metadata", snapshot)
             self.assertIn("data", snapshot)
+
+    def test_loads_version_one_snapshot_without_indexes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "memdb.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "metadata": {
+                            "tables": [
+                                {
+                                    "name": "users",
+                                    "columns": [
+                                        {
+                                            "name": "id",
+                                            "datatype": "INT",
+                                            "cell_metadata": {
+                                                "default_value": None,
+                                                "min_size": None,
+                                                "max_size": None,
+                                            },
+                                        }
+                                    ],
+                                }
+                            ]
+                        },
+                        "data": {"tables": {"users": [[1]]}},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            loaded = JsonFileStorage(path).load()
+
+            self.assertEqual(loaded.tables["users"].indexes, {})
+            self.assertEqual(
+                loaded.tables["users"].table.rows[0].cells[0].data.value(), 1
+            )
 
     def test_load_rejects_invalid_json(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -124,7 +174,12 @@ class JsonFileStorageTest(unittest.TestCase):
             )
         )
         data = DBData()
-        data.tables[table.name] = table
+        table_entry = TableEntry(
+            table,
+            indexes={"name": HashIndex("name", 1)},
+        )
+        table_entry.rebuild_indexes()
+        data.tables[table.name] = table_entry
         return data
 
 

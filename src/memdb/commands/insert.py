@@ -16,9 +16,10 @@ class InsertQuery(QueryInterface):
         self.values = values
 
     def run(self, data: DBData) -> QueryResult:
-        table = data.tables.get(self.table_name)
-        if table is None:
+        table_entry = data.tables.get(self.table_name)
+        if table_entry is None:
             return QueryResult(success=False, message=f"table {self.table_name} does not exist")
+        table = table_entry.table
 
         defined_columns = {column.name for column in table.columns}
         undefined_columns = [
@@ -61,7 +62,7 @@ class InsertQuery(QueryInterface):
                 )
             cells.append(Cell(data_types[expected_type](value)))
 
-        table.rows.append(Row(cells))
+        table_entry.add_row(Row(cells))
         return QueryResult(
             success=True,
             message="row added successfully",
